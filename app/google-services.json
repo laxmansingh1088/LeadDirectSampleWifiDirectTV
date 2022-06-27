@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "369695026760",
+    "project_id": "leaddirectsamplewifidirecttv",
+    "storage_bucket": "leaddirectsamplewifidirecttv.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:369695026760:android:0e6d5c991b3330aa8df27d",
+        "android_client_info": {
+          "package_name": "com.example.leaddirectsamplewifidirecttv"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "369695026760-an6ephngcdk9onknto07v75q89c3f3js.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAol6kiVAcUAK7hcuFhrvJUXNerpaIQz8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "369695026760-an6ephngcdk9onknto07v75q89c3f3js.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

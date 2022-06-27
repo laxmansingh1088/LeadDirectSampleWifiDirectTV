@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:focusable="true"
+    android:keepScreenOn="true">
+
+    <LinearLayout
+        android:id="@+id/lynLyt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:padding="16dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_image"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="Image" />
+
+        <Button
+            android:id="@+id/btn_video"
+            android:layout_width="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_height="wrap_content"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="Video" />
+
+
+        <Button
+            android:id="@+id/btn_pdf"
+            android:layout_width="wrap_content"
+            android:layout_marginStart="16dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:layout_height="wrap_content"
+            android:text="PDF" />
+
+        <Button
+            android:id="@+id/btn_webview"
+            android:layout_width="wrap_content"
+            android:layout_marginStart="16dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:layout_height="wrap_content"
+            android:text="Webview" />
+
+    </LinearLayout>
+
+    <com.github.barteksc.pdfviewer.PDFView
+        android:id="@+id/pdfView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/lynLyt"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/lynLyt"
+        android:layout_centerInParent="true"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
+    <com.google.android.exoplayer2.ui.PlayerView
+        android:id="@+id/playerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/lynLyt"
+        android:focusable="true">
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+
+    </com.google.android.exoplayer2.ui.PlayerView>
+
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:visibility="gone"
+        android:layout_height="match_parent"/>
+
+</RelativeLayout>

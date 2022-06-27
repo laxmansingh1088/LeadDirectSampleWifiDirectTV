@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+}
+
+android {
+    compileSdk 32
+
+    defaultConfig {
+        applicationId "com.example.leaddirectsamplewifidirecttv"
+        minSdk 21
+        targetSdk 32
+        versionCode 1
+        versionName "1.0"
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    buildFeatures {
+        viewBinding = true
+    }
+}
+
+dependencies {
+    implementation 'com.google.android.gms:play-services-location:20.0.0'
+    def roomVersion = "2.4.2"
+    implementation project(path: ':leadp2pDirect')
+
+    implementation "androidx.room:room-runtime:$roomVersion"
+    kapt "androidx.room:room-compiler:$roomVersion"
+// Kotlin Extensions and Coroutines support for Room
+    implementation "androidx.room:room-ktx:$roomVersion"
+
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.leanback:leanback:1.0.0'
+    implementation 'com.github.bumptech.glide:glide:4.11.0'
+    implementation 'com.github.barteksc:android-pdf-viewer:3.2.0-beta.1'
+    implementation 'com.google.android.exoplayer:exoplayer:2.18.0'
+    implementation 'androidx.fragment:fragment:1.4.1'
+    implementation 'androidmads.library.qrgenearator:QRGenearator:1.0.4'
+    implementation 'com.google.zxing:core:3.3.2'
+    implementation 'com.google.code.gson:gson:2.9.0'
+    implementation 'androidx.fragment:fragment-ktx:1.1.0'
+    implementation platform('com.google.firebase:firebase-bom:30.2.0')
+    implementation 'com.google.firebase:firebase-crashlytics-ktx'
+}
