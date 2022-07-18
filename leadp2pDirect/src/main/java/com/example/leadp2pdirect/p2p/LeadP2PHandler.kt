@@ -1,6 +1,7 @@
 package com.example.leadp2p.p2p
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -16,15 +17,14 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat.checkSelfPermission
 import com.example.leadp2pdirect.P2PCallBacks
-import com.example.leadp2pdirect.chatconnection.ChatClient
-import com.example.leadp2pdirect.chatconnection.ChatConnection
-import com.example.leadp2pdirect.chatconnection.ChatServer
 import com.example.leadp2pdirect.chatmessages.ChatCommands
+import com.example.leadp2pdirect.chatttthreadds.ChatClient
+import com.example.leadp2pdirect.chatttthreadds.ChatServer
 import com.example.leadp2pdirect.constants.Constants
-import com.example.leadp2pdirect.helpers.callbacks.Callback
 import com.example.leadp2pdirect.mappers.Mapper
 import com.example.leadp2pdirect.p2p.MyDeviceInfoForQrCode
 import com.example.leadp2pdirect.servers.FileServerAsyncTask
@@ -34,14 +34,13 @@ import com.example.leadp2pdirect.threadss.ClientFileTransfer
 import com.example.leadp2pdirect.threadss.ServerFileTransfer
 import com.example.leadp2pdirect.utils.Utils
 import com.google.gson.Gson
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
 
 
+@SuppressLint("NewApi")
 class LeadP2PHandler(
     private val activity: Activity,
     private val p2PCallBacks: P2PCallBacks,
@@ -55,22 +54,21 @@ class LeadP2PHandler(
     }
 
     private val TAG = "LeadP2PHandler.kt"
-
     private var wifiP2pGroup: WifiP2pGroup? = null
     private var prevP2pInfo: WifiP2pInfo? = null
     private var isServer = false
 
     private var serverAddress: InetAddress? = null
     private var serverSocket: ServerSocket? = null
+    private var chatserverSocket: ServerSocket? = null
     private var fileServerAsyncTask: FileServerAsyncTask? = null
 
-    private var callbackReInitFileServer: Callback? = null
-
-    private var connection: ChatConnection? = null
     private var client: ClientInfo? = null
 
     private var serverFileTransfer: ServerFileTransfer? = null
     private var clientFileTransfer: ClientFileTransfer? = null
+    private var chatServer: ChatServer? = null
+    private var chatClient: ChatClient? = null
 
 
     init {
@@ -79,12 +77,18 @@ class LeadP2PHandler(
         channel.also {
             receiver = P2PBroadcastReceiver(this::onP2PStateReceiver)
         }
-
-        createGroupOwnerr()
-
+        //  createGroupOwnerr()
         discoverPeers()
     }
 
+
+    fun getWifiP2pManager(): WifiP2pManager? {
+        return manager
+    }
+
+    fun getChannel(): WifiP2pManager.Channel? {
+        return channel
+    }
 
     fun createGroupOwnerr() {
         if (becomeGroupOwnerIntent) {
@@ -109,42 +113,67 @@ class LeadP2PHandler(
     }
 
     private fun discoverPeers() {
-        /*   val mServiceBroadcastingRunnable: Runnable = object : Runnable {
-               override fun run() {
-                   if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION)
-                       != PackageManager.PERMISSION_GRANTED
-                   ) {
-                       return
-                   }
-                   manager?.discoverPeers(
-                       channel,
-                       object : WifiP2pManager.ActionListener {
-                           override fun onSuccess() {}
-                           override fun onFailure(error: Int) {
-                           }
-                       })
-                   Handler(Looper.getMainLooper()).postDelayed(this, 10000)
-               }
-           }
-           mServiceBroadcastingRunnable.run()*/
+        val mServiceBroadcastingRunnable: Runnable = object : Runnable {
+            override fun run() {
+                if (ActivityCompat.checkSelfPermission(
+                        activity,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    )
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    return
+                }
+                manager?.discoverPeers(
+                    channel,
+                    object : WifiP2pManager.ActionListener {
+                        override fun onSuccess() {
+                            Log.i("WIFI Discover", "Peers discovery successfully")
+                            Utils.showToast(activity, "Peers discovery successfully")
+                        }
 
-
-        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
+                        override fun onFailure(error: Int) {
+                            Log.i("WIFI Discover", "Peers discovery failed $error")
+                            Utils.showToast(activity, "Peers discovery failed  Code :-  $error")
+                        }
+                    })
+                manager?.requestConnectionInfo(channel) {
+                    if (!it.groupFormed) {
+                        Handler(Looper.getMainLooper()).postDelayed(this, 6000)
+                    } else {
+                        stopDiscoveringPeers()
+                    }
+                }
+            }
         }
-        manager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.i("WIFI Discover", "Peers discovery successfully")
-                Utils.showToast(activity, "Peers discovery successfully")
-            }
+        mServiceBroadcastingRunnable.run()
 
-            override fun onFailure(p0: Int) {
-                Log.i("WIFI Discover", "Peers discovery failed $p0")
-                Utils.showToast(activity, "Peers discovery failed  Code :-  $p0")
-            }
-        })
+
+        /*  if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION)
+              != PackageManager.PERMISSION_GRANTED
+          ) {
+              return
+          }
+          manager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
+              override fun onSuccess() {
+                  Log.i("WIFI Discover", "Peers discovery successfully")
+                  Utils.showToast(activity, "Peers discovery successfully")
+                  if (!isConnected()) {
+                      Handler().postDelayed(Runnable { startPeersDiscovery() },6000)
+                  } else {
+                      manager?.stopPeerDiscovery(channel, null)
+                  }
+              }
+
+              override fun onFailure(p0: Int) {
+                  if (!isConnected()) {
+                      Handler().postDelayed(Runnable { startPeersDiscovery() },6000)
+                  } else {
+                      manager?.stopPeerDiscovery(channel, null)
+                  }
+                  Log.i("WIFI Discover", "Peers discovery failed $p0")
+                  Utils.showToast(activity, "Peers discovery failed  Code :-  $p0")
+              }
+          })*/
     }
 
     fun startPeersDiscovery() {
@@ -298,32 +327,66 @@ class LeadP2PHandler(
 
     public fun isServer() = isServer
 
+    private fun initChatClient() {
+        isConnected()
+        if (chatClient == null) {
+            Log.d(TAG, "initChatClient()")
+            chatClient =
+                ChatClient(activity, serverAddress, p2PCallBacks, this.MessageReceiver, this)
+            chatClient?.priority = Thread.MAX_PRIORITY
+            chatClient?.start()
+        }
+    }
+
+
+    private fun initChatSockets() {
+        try {
+            if (chatserverSocket == null) {
+                chatserverSocket = ServerSocket(Constants.CHAT_PORT)
+                Log.d(TAG, "chatserverSocket==null")
+                Log.d(
+                    TAG,
+                    "initChatSockets---> if block -> +${chatserverSocket?.isClosed} && ${chatserverSocket?.isBound}"
+                )
+            } else {
+                Log.d(
+                    TAG,
+                    "initChatSockets---> else block -> +${chatserverSocket?.isClosed} && ${chatserverSocket?.isBound}"
+                )
+            }
+            Log.d(TAG, "chatserverSocket== assigned")
+        } catch (e: Exception) {
+            Log.d(TAG, "chatserverSocket== Exception--> " + e.message)
+            e.printStackTrace()
+        }
+    }
+
+
+    private fun initChatServer() {
+        if (chatServer != null) {
+            chatServer = null
+        }
+        Log.d(
+            TAG,
+            "initChatServer---> +${chatserverSocket?.isClosed} && ${chatserverSocket?.isBound}"
+        )
+        chatServer =
+            ChatServer(activity, chatserverSocket, p2PCallBacks, this.MessageReceiver, this)
+        chatServer?.priority = Thread.MAX_PRIORITY
+        chatServer?.start()
+
+    }
+
+    private fun initChatSocketConnection() {
+        initChatSockets()
+        initChatServer()
+    }
+
 
     private fun initSocketConnection() {
         //init sockets for transport servers and callbacks for reinit servers
         initSockets()
-        /* callbackReInitFileServer = Callback {
-             Log.d("Receiver", "callbackReInitFileServer----Line 240")
-             this.initFileServer(emptyArray())
-         }*/
-
-        initFileServer(emptyArray());
-
-        //On the specified device p2p are disabled, to enable it I use
-        try {
-            val wifiManager = Class.forName("android.net.wifi.p2p.WifiP2pManager")
-            val method = wifiManager.getMethod("enableP2p", WifiP2pManager.Channel::class.java)
-            method.invoke(manager, channel)
-        } catch (ignored: Exception) {
-            Log.d(
-                "LeadP2PHandler",
-                "On the specified device p2p are disabled, to enable it I use $ignored"
-            )
-        }
-        //Just in case, I delete the group, since after an instant restart of the application,
-        // Dalvik doesn't clean the application immediately, but with it both the manager and the channel
-//        manager?.removeGroup(channel, null)
-
+        initFileServer()
     }
 
     private val MessageReceiver: ReceiveCallback = object : ReceiveCallback {
@@ -339,7 +402,7 @@ class LeadP2PHandler(
             this@LeadP2PHandler.activity.runOnUiThread {
                 //code that runs in main
                 val chatMessage = ChatMessage.Deserialize(s)
-                Log.d("receivedMessageee", s)
+                Log.d(TAG, "Received Chat messag:-->  $s")
                 Toast.makeText(this@LeadP2PHandler.activity, s, Toast.LENGTH_SHORT).show()
                 val chatCommands = Gson().fromJson(chatMessage.content, ChatCommands::class.java)
                 p2PCallBacks.onReceiveChatCommands(chatCommands)
@@ -358,15 +421,14 @@ class LeadP2PHandler(
                 Log.d("LeadP2PHandler", "I'm Server")
                 Utils.showToast(activity, "I am Server...")
                 this.isServer = true
-                this.connection = ChatServer(this.MessageReceiver)
                 initSocketConnection()
+                initChatSocketConnection()
             } else {
                 Log.d("LeadP2PHandler", "I'm Client")
                 this.isServer = false
                 val info = ClientInfo("deviceAddress", "user")
                 initClient()
-                this.connection =
-                    ChatClient(p2pInfo.groupOwnerAddress, this.MessageReceiver, info)
+                initChatClient()
             }
         }
         // }
@@ -374,7 +436,7 @@ class LeadP2PHandler(
     }
 
     private fun initClient() {
-        Log.d(TAG, "initClient() --> Isconnected -> ${isConnected()}")
+        isConnected()
         if (clientFileTransfer == null) {
             Log.d(TAG, "initClient()")
             clientFileTransfer = ClientFileTransfer(activity, serverAddress, p2PCallBacks, this)
@@ -506,6 +568,7 @@ class LeadP2PHandler(
         var isConnected = false
         manager?.requestConnectionInfo(channel) {
             isConnected = it.groupFormed
+            Log.d(TAG, "Isconnected -> ${it.groupFormed}")
         }
         return isConnected
     }
@@ -526,6 +589,7 @@ class LeadP2PHandler(
                         override fun onSuccess() {
                             Log.d("WIFI Discover", "removeGroup onSuccess -")
                             cleanUpClient()
+                            cleanUpChatClient()
                         }
 
                         override fun onFailure(reason: Int) {
@@ -539,46 +603,31 @@ class LeadP2PHandler(
 
 
     fun sendMessage(text: String, device: PeerDevice?) {
-        runBlocking {
-            GlobalScope.launch {
-                val message = ChatMessage(
-                    ClientInfo(device!!.deviceId, device!!.deviceName),
-                    text
-                )
-                this@LeadP2PHandler.connection?.SendMessage(message)
-            }
+        val message = ChatMessage(
+            ClientInfo(device!!.deviceId, device!!.deviceName),
+            text
+        )
+        if (isServer) {
+            chatServer?.sendMessage(message)
+        } else {
+            chatClient?.sendMessage(message)
         }
     }
 
     fun sendLogs(text: String, device: PeerDevice?) {
         if (device == null) return
-        runBlocking {
-            GlobalScope.launch {
-                val message = ChatMessage(
-                    ClientInfo(device!!.deviceName, device!!.deviceName),
-                    text
-                )
-                this@LeadP2PHandler.connection?.SendMessage(message)
-            }
-        }
-    }
-
-    fun shareResource(path: String, device: PeerDevice?) {
-    }
-
-    private fun receiveResources() {
-        if (fileServerAsyncTask != null) {
-            fileServerAsyncTask = null
-            Toast.makeText(this.activity, "File receiving is disabled", Toast.LENGTH_SHORT).show()
-
+        val message = ChatMessage(
+            ClientInfo(device!!.deviceName, device!!.deviceName),
+            text
+        )
+        if (isServer) {
+            chatServer?.sendMessage(message)
         } else {
-            Toast.makeText(this.activity, "File receiving is enabled", Toast.LENGTH_SHORT).show()
-            initFileServer(emptyArray())
+            chatClient?.sendMessage(message)
         }
     }
 
-
-    private fun initFileServer(receivedFiles: Array<File?>) {
+    private fun initFileServer() {
         if (serverFileTransfer != null) {
             serverFileTransfer = null
         }
@@ -586,7 +635,6 @@ class LeadP2PHandler(
         serverFileTransfer = ServerFileTransfer(activity, serverSocket, p2PCallBacks, this)
         serverFileTransfer?.priority = Thread.MAX_PRIORITY
         serverFileTransfer?.start()
-
     }
 
     private fun initSockets() {
@@ -631,6 +679,14 @@ class LeadP2PHandler(
         }
     }
 
+    private fun cleanUpChatClient() {
+        if (chatClient != null) {
+            Log.d(TAG, "cleanUpChatClient()")
+            chatClient?.cleanUp()
+            chatClient = null
+        }
+    }
+
     fun cleanUp() {
         try {
             serverSocket!!.close()
@@ -654,9 +710,14 @@ class LeadP2PHandler(
 
 
     fun unRegisterReceiver() {
+        stopDiscoveringPeers()
         receiver?.also { receiver ->
             activity.unregisterReceiver(receiver)
         }
+    }
+
+    fun stopDiscoveringPeers() {
+        manager?.stopPeerDiscovery(channel, null)
     }
 
     fun isWifiEnabled(): Boolean? {
@@ -692,6 +753,25 @@ class LeadP2PHandler(
         }
     }
 
+
+    override fun cleanAndRestartChatServer() {
+        Log.d(TAG, "Chat SErver restarted....>>..>>")
+        initChatSocketConnection()
+    }
+
+    override fun cleanAndRestartChatClient() {
+        Log.d(TAG, "Chat Client restarted....>>..>>")
+        if (chatClient != null) {
+            chatClient = null
+        }
+
+        manager?.requestConnectionInfo(channel) {
+            if (it.groupFormed) {
+                initChatClient()
+            }
+        }
+    }
+
     override fun cleanAndRestartServer() {
         Log.d(TAG, "SErver restarted....>>..>>")
         initSocketConnection()
@@ -702,8 +782,10 @@ class LeadP2PHandler(
         if (clientFileTransfer != null) {
             clientFileTransfer = null
         }
-        if (isConnected()) {
-            initClient()
+        manager?.requestConnectionInfo(channel) {
+            if (it.groupFormed) {
+                initClient()
+            }
         }
     }
 }

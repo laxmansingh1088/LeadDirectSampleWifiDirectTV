@@ -2,6 +2,7 @@ package layout
 
 import android.os.Bundle
 import android.view.View
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
@@ -47,7 +48,9 @@ class WebViewFragment : Fragment(R.layout.fragment_webview) {
             }
         }
 
-
+        webView?.webChromeClient = WebChromeClient()
+        webView?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        webView?.requestFocusFromTouch()
     }
 
 

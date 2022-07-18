@@ -1,6 +1,7 @@
 package com.example.leaddirectsamplewifidirecttv.viewmodels
 
 import android.net.wifi.p2p.WifiP2pDevice
+import android.util.Log
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModel
@@ -36,10 +37,11 @@ class MainActivityViewModel : ViewModel() {
                 (currentFragment as MainFragment).manageUIWhenP2PIsConnected(false, null)
             }
         } else {
-            if (leadp2pHander?.isConnected() == false) {
-                (currentFragment as MainFragment).manageUIWhenP2PIsConnected(false, null)
+            leadp2pHander?.getWifiP2pManager()?.requestConnectionInfo(leadp2pHander?.getChannel()) {
+                if (currentFragment != null && it.groupFormed == false) {
+                    (currentFragment as MainFragment).manageUIWhenP2PIsConnected(false, null)
+                }
             }
-
         }
     }
 

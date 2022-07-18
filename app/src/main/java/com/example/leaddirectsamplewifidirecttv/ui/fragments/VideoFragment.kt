@@ -29,7 +29,6 @@ class VideoFragment : Fragment(R.layout.fragment_video) {
     private lateinit var binding: FragmentVideoBinding
     private lateinit var simpleExoPlayer: ExoPlayer
     private var playerView: StyledPlayerView? = null
-    private var countDownTimer: CountDownTimer? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val filePathsList =
@@ -41,15 +40,6 @@ class VideoFragment : Fragment(R.layout.fragment_video) {
         if (filePathsList != null) {
             activity?.runOnUiThread(Runnable { initializePlayer(filePathsList.get(0).absoluteFilePath) })
         }
-
-        countDownTimer = object : CountDownTimer(30000, 5000) {
-            override fun onTick(millisUntilFinished: Long) {
-                showMemory()
-            }
-
-            override fun onFinish() {
-            }
-        }.start()
     }
 
     private fun initializePlayer(path: String) {
@@ -152,7 +142,6 @@ class VideoFragment : Fragment(R.layout.fragment_video) {
 
      override fun onStop() {
         super.onStop()
-        countDownTimer?.cancel()
         if (Util.SDK_INT > 23) releasePlayer()
 
     }

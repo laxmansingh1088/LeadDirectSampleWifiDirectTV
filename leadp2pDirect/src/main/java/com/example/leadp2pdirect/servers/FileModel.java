@@ -8,12 +8,13 @@ import java.io.Serializable;
 public class FileModel implements Serializable {
     public static final int TYPE_PHOTO = 0;
     public static final int TYPE_VIDEO = 1;
-    public static final int TYPE_PDF = 2;
-    public static final int TYPE_APPLICATION = 3;
-    public static final int TYPE_H5P = 4;
-    public static final int TYPE_ZIP = 5;
-    public static final int TYPE_DOC = 6;
-    public static final int TYPE_COMMON = 7;
+    public static final int TYPE_AUDIO = 2;
+    public static final int TYPE_PDF = 3;
+    public static final int TYPE_APPLICATION = 4;
+    public static final int TYPE_H5P = 5;
+    public static final int TYPE_ZIP = 6;
+    public static final int TYPE_DOC = 7;
+    public static final int TYPE_COMMON = 8;
 
     private Long id;
     private File file;

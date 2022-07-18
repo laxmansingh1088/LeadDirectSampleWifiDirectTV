@@ -6,9 +6,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import com.example.leadp2pdirect.P2PCallBacks
-import com.example.leadp2pdirect.constants.Constants
 import com.example.leadp2pdirect.servers.FileDownloadUploadProgresssModel
 import com.example.leadp2pdirect.servers.FileHelper
 import com.example.leadp2pdirect.servers.FileHelper.deleteDir
@@ -38,11 +36,11 @@ class ServerFileTransfer(
 
     fun sendFiles(uris: ArrayList<Uri>) {
         val executorService = Executors.newSingleThreadExecutor()
+        val handler = Handler(Looper.getMainLooper())
         executorService.execute {
             var len = 0
             val buf = ByteArray(8192)
             var timeTakenbyFile = ""
-            val handler = Handler(Looper.getMainLooper())
             try {
                 val fileModelArrayList =
                     FileHelper.getFileModelsListFromUris(uris, getContentResolverInstance()!!)
@@ -88,16 +86,18 @@ class ServerFileTransfer(
                     }
                 }
                 objectOutputStream?.flush()
-
             } catch (e: Exception) {
-                Log.d("Data Transfer", e.toString())
-                cleanAndRestartServer(e.message)
-            } finally {
+                e.message?.let { Log.d(TAG, it) }
+                Log.d(TAG, "cleanAndRestartServer() --> line 91")
+                handler.post {
+                    cleanAndRestartServer()
+                }
             }
         }
     }
 
     override fun run() {
+        val handler = Handler(Looper.getMainLooper())
         try {
             Log.d(TAG, "serverFiletranser== run() method");
             socket = serverSocket!!.accept()
@@ -105,11 +105,14 @@ class ServerFileTransfer(
             objectOutputStream?.flush()
             objectInputStream = ObjectInputStream(socket?.getInputStream())
         } catch (e: IOException) {
-            cleanAndRestartServer(e.message)
+            e.message?.let { Log.d(TAG, it) }
+            handler.post {
+                Log.d(TAG, "cleanAndRestartServer() --> line 110")
+                cleanAndRestartServer()
+            }
         }
 
         val executorService = Executors.newSingleThreadExecutor()
-        val handler = Handler(Looper.getMainLooper())
         executorService.execute {
             val buf = ByteArray(8192)
             var len = 0
@@ -134,7 +137,7 @@ class ServerFileTransfer(
                         file = File(context?.let { getRootDirectoryPath(it) } + "/" + fileName)
                         Log.d("Receiver", file.path)
                         val dir = file.parentFile
-                        // Utils.INSTANCE.deleteDir(dir);
+                        deleteDir(dir)
                         if (!dir.exists()) {
                             dir.mkdirs()
                         }
@@ -186,13 +189,10 @@ class ServerFileTransfer(
                                 val list = java.util.ArrayList<FileModel>()
                                 receivedFilesPathList?.let { list.addAll(it) }
                                 onPostExecute(list)
+                                receivedFilesPathList?.clear()
                                 receivedFilesPathList = null
                             }
-                            Log.d(
-                                "whileloopp",
-                                "FileServerAsyncTask.java -- Receiving Finished==================="
-                            )
-
+                            Log.d(TAG, "Receiving Finished===")
                         } catch (e: Exception) {
                             Log.d("Receiver", "oops")
                             e.printStackTrace()
@@ -201,8 +201,11 @@ class ServerFileTransfer(
                         outputStream.close()
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
-                    cleanAndRestartServer(e.message)
+                    e.message?.let { Log.d(TAG, it) }
+                    handler.post {
+                        Log.d(TAG, "cleanAndRestartServer() --> line 206")
+                        cleanAndRestartServer()
+                    }
                 }
             }
             Log.d("done.", "doneee")
@@ -235,7 +238,7 @@ class ServerFileTransfer(
     }
 
 
-    private fun cleanAndRestartServer(exceptionMessage: String?) {
+    private fun cleanAndRestartServer() {
         try {
             socket?.close()
             socket = null
@@ -243,15 +246,12 @@ class ServerFileTransfer(
             objectOutputStream?.flush()
             objectOutputStream?.close()
         } catch (ex: Exception) {
-            Log.d(TAG, "cleanAndRestartServer --> ${ex.message}")
+            Log.d(TAG, "cleanAndRestartServer() --> ${ex.message}")
         }
-        val handler = Handler(Looper.getMainLooper())
-        handler.post() {
-            if (context != null) {
-                Log.d(TAG, "cleanAndRestartServer --> ${exceptionMessage}")
-            }
-            leadP2PHandlerCallbacks.cleanAndRestartServer()
+        if (context != null) {
+            Log.d(TAG, "cleanAndRestartServer() -->")
         }
+        leadP2PHandlerCallbacks.cleanAndRestartServer()
 
     }
 
@@ -261,6 +261,7 @@ class ServerFileTransfer(
             context.let {
                 if (it != null) {
                     cr = it.contentResolver
+
                 }
             }
         }

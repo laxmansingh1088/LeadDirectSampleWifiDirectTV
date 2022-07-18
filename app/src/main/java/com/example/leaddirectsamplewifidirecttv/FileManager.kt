@@ -1,6 +1,10 @@
 package com.example.leaddirectsamplewifidirecttv
 
 import android.util.Log
+import android.widget.Toast
+import com.example.leadp2pdirect.utils.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.*
 import java.util.*
 import java.util.zip.ZipEntry
@@ -9,7 +13,7 @@ import java.util.zip.ZipInputStream
 class FileManager {
     private val APPLE_RESOURCE = "__MACOSX"
 
-    suspend fun  unzip(filePath: String, destination: String): String? {
+    suspend fun unzip(filePath: String, destination: String): String? {
         var indexFilePath = destination
         try {
             val inputStream = FileInputStream(filePath)
@@ -34,7 +38,7 @@ class FileManager {
                         i++
                     }
                     if (zEntry!!.isDirectory) {
-                        hanldeDirectory(zEntry!!.name, destination)
+                        handleDirectory(zEntry!!.name, destination)
                     } else {
                         val newfile = File(destination.toString() + "/" + zEntry!!.name)
                         if (!newfile.getParentFile().exists()) {
@@ -68,8 +72,15 @@ class FileManager {
         return null
     }
 
-    fun hanldeDirectory(dir: String, destination: String) {
-        val f = File(destination.toString() + dir)
+    private fun handleDirectory(dir: String, destinationTemp: String) {
+        var destination = destinationTemp;
+        if (destination.toCharArray()[destination.length - 1] != '/'
+            && dir.toCharArray()[0] != '/'
+        ) {
+            destination += "/"
+        }
+
+        val f = File(destination + dir)
         if (!f.isDirectory) {
             f.mkdirs()
         }

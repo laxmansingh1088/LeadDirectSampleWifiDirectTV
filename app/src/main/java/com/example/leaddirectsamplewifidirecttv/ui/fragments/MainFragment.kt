@@ -41,10 +41,14 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             viewModel.leadp2pHander?.checkServerFile()
         }
 
-        if (viewModel.leadp2pHander?.isConnected() == true) {
-            Log.d(TAG, "onResume->Connected->true")
-        } else {
-            Log.d(TAG, "onResume->Connected->false")
+
+
+        viewModel.leadp2pHander?.getWifiP2pManager()?.requestConnectionInfo( viewModel.leadp2pHander?.getChannel()) {
+            if (it.groupFormed == true) {
+                Log.d(TAG, "onResume->Connected->true")
+            } else {
+                Log.d(TAG, "onResume->Connected->false")
+            }
         }
     }
 

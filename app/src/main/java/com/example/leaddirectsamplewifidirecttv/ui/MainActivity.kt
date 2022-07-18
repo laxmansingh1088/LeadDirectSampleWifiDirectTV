@@ -2,6 +2,7 @@ package com.example.leaddirectsamplewifidirecttv.ui
 
 
 import android.content.Intent
+import android.content.IntentSender.SendIntentException
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -10,9 +11,9 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.content.FileProvider
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import com.example.leaddirectsamplewifidirecttv.BuildConfig
@@ -29,14 +30,19 @@ import com.example.leadp2p.p2p.LeadP2PHandler
 import com.example.leadp2p.p2p.PeerDevice
 import com.example.leadp2pdirect.P2PCallBacks
 import com.example.leadp2pdirect.chatmessages.ChatCommands
-import com.example.leadp2pdirect.chatmessages.enumss.TransferStatus
 import com.example.leadp2pdirect.chatmessages.VideoCommands
-import com.example.leadp2pdirect.chatmessages.enumss.VideoPlayBacks
 import com.example.leadp2pdirect.chatmessages.constants.ChatType
+import com.example.leadp2pdirect.chatmessages.enumss.TransferStatus
+import com.example.leadp2pdirect.chatmessages.enumss.VideoPlayBacks
 import com.example.leadp2pdirect.helpers.PermissionsHelper
-import com.example.leadp2pdirect.utils.Utils
 import com.example.leadp2pdirect.servers.FileDownloadUploadProgresssModel
 import com.example.leadp2pdirect.servers.FileModel
+import com.example.leadp2pdirect.utils.Utils
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.location.LocationSettingsResponse
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
@@ -74,6 +80,7 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
             viewModel.openFragment(mainFragment, supportFragmentManager)
         }
         requestPermissionInstallApk()
+        enableLocationSettings()
     }
 
     private fun initializeWifiDirectSdk() {
@@ -81,6 +88,37 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
         // leadp2pHander?.createGroupOwner()
     }
 
+
+    protected fun enableLocationSettings() {
+        val locationRequest: LocationRequest = LocationRequest.create()
+            .setInterval(5000)
+            .setFastestInterval(1000)
+            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+        val builder = LocationSettingsRequest.Builder()
+            .addLocationRequest(locationRequest)
+        LocationServices
+            .getSettingsClient(this)
+            .checkLocationSettings(builder.build())
+            .addOnSuccessListener(
+                this
+            ) { response: LocationSettingsResponse? ->}
+            .addOnFailureListener(
+                this
+            ) { ex: Exception? ->
+                if (ex is ResolvableApiException) {
+                    // Location settings are NOT satisfied,  but this can be fixed  by showing the user a dialog.
+                    try {
+                        // Show the dialog by calling startResolutionForResult(),  and check the result in onActivityResult().
+                        ex.startResolutionForResult(
+                            this@MainActivity,
+                            1007
+                        )
+                    } catch (sendEx: SendIntentException) {
+                        // Ignore the error.
+                    }
+                }
+            }
+    }
     private fun requestPermissionInstallApk() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!getPackageManager().canRequestPackageInstalls()) {
@@ -106,6 +144,11 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
         viewModel.leadp2pHander?.unRegisterReceiver()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.leadp2pHander?.unRegisterReceiver()
+    }
+
 
     //............... Library method callbacks.............................
 
@@ -123,12 +166,18 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
     }
 
     override fun onFilesReceived(filePathsList: ArrayList<FileModel>) {
+
         Utils.showToast(this, "File Received.....")
         Log.d("patthhhh", filePathsList.get(0).absoluteFilePath)
         val bundle = Bundle()
         bundle.putSerializable("filePathsList", filePathsList)
         val fragment: Fragment? = when (filePathsList[0].type) {
             FileModel.TYPE_VIDEO -> {
+                val videoFragment = VideoFragment()
+                videoFragment.arguments = bundle
+                videoFragment
+            }
+            FileModel.TYPE_AUDIO -> {
                 val videoFragment = VideoFragment()
                 videoFragment.arguments = bundle
                 videoFragment
@@ -144,28 +193,34 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
                 pdfFragment
             }
             FileModel.TYPE_APPLICATION -> {
-                installAPK(filePathsList.get(0).absoluteFilePath)
+                installAPK(filePathsList[0].absoluteFilePath)
                 null
             }
             FileModel.TYPE_ZIP -> {
-                val zipFilePath = filePathsList.get(0).absoluteFilePath;
+                val zipFilePath = filePathsList[0].absoluteFilePath;
                 val targetLocation =
-                    filePathsList.get(0).absoluteFilePath.replace(
-                        filePathsList.get(0).fileName,
+                    filePathsList[0].absoluteFilePath.replace(
+                        filePathsList[0].fileName,
                         ""
                     ) + "ir_res_folder"
                 Log.d("targetLocation", targetLocation)
+                var indexFilePath: String?
                 runBlocking {
-                    val indexFilePath =
-                        GlobalScope.async { FileManager().unzip(zipFilePath, targetLocation) }
-                            .await()
-                    Log.d("Unzip", "-------->  " + indexFilePath)
-                    val bundle = Bundle()
-                    bundle.putString("ir_res_path_index", indexFilePath)
-                    val webviewFragment = WebViewFragment()
-                    webviewFragment.arguments = bundle
-                    webviewFragment
+                    indexFilePath =
+                        withContext(Dispatchers.IO) {
+                            FileManager().unzip(
+                                zipFilePath,
+                                targetLocation
+                            )
+                        }
                 }
+                Log.d("Unzip", "-------->  " + indexFilePath)
+                Toast.makeText(applicationContext, indexFilePath, Toast.LENGTH_LONG).show()
+                val bundle = Bundle()
+                bundle.putString("ir_res_path_index", indexFilePath)
+                val webviewFragment = WebViewFragment()
+                webviewFragment.arguments = bundle
+                webviewFragment
             }
             else -> {
                 null
@@ -176,7 +231,6 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
             viewModel.openFragment(fragment, supportFragmentManager)
         }
 
-        System.gc()
     }
 
 
@@ -219,12 +273,20 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
                 (viewModel.currentFragment as MainFragment)?.myDeviceInfo()
             }
         } else {
-            if (viewModel.leadp2pHander?.isConnected() == false) {
+            viewModel.leadp2pHander?.getWifiP2pManager()?.requestConnectionInfo( viewModel.leadp2pHander?.getChannel()) {
+                if (!it.groupFormed) {
+                    viewModel.selectedDevice = null
+                    if (deviceInfoForQrCode != null && viewModel.currentFragment is MainFragment) {
+                        (viewModel.currentFragment as MainFragment)?.myDeviceInfo()
+                    }
+                }
+            }
+           /* if (viewModel.leadp2pHander?.isConnected() == false) {
                 viewModel.selectedDevice = null
                 if (deviceInfoForQrCode != null && viewModel.currentFragment is MainFragment) {
                     (viewModel.currentFragment as MainFragment)?.myDeviceInfo()
                 }
-            }
+            }*/
         }
     }
 

@@ -35,11 +35,11 @@ class ClientFileTransfer(
 
     fun sendFiles(uris: ArrayList<Uri>) {
         val executorService = Executors.newSingleThreadExecutor()
+        val handler = Handler(Looper.getMainLooper())
         executorService.execute {
             var len = 0
             val buf = ByteArray(8192)
             var timeTakenbyFile = ""
-            val handler = Handler(Looper.getMainLooper())
             try {
                 val fileModelArrayList =
                     FileHelper.getFileModelsListFromUris(uris, getContentResolverInstance()!!)
@@ -85,7 +85,6 @@ class ClientFileTransfer(
                     }
                 }
                 objectOutputStream?.flush()
-
             } catch (e: Exception) {
                 Log.d(TAG, "Exception --> line 90")
                 cleanAndRestartClient(e.message)
