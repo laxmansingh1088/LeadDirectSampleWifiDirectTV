@@ -77,6 +77,7 @@ class LeadP2PHandler(
         channel.also {
             receiver = P2PBroadcastReceiver(this::onP2PStateReceiver)
         }
+       // manager?.removeGroup(channel,null)
         //  createGroupOwnerr()
         discoverPeers()
     }
@@ -138,7 +139,7 @@ class LeadP2PHandler(
                     })
                 manager?.requestConnectionInfo(channel) {
                     if (!it.groupFormed) {
-                        Handler(Looper.getMainLooper()).postDelayed(this, 6000)
+                        Handler(Looper.getMainLooper()).postDelayed(this, 10000)
                     } else {
                         stopDiscoveringPeers()
                     }

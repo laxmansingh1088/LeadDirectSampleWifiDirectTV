@@ -78,7 +78,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
             val myDeviceInfoForQrCode =
                 Gson().fromJson(deviceInfoForQrCode, MyDeviceInfoForQrCode::class.java)
-            binding.deviceName.setText(myDeviceInfoForQrCode.deviceId)
+            binding.deviceName.setText(myDeviceInfoForQrCode.deviceName)
             if (deviceInfoForQrCode != null) {
                 generateQRCode(deviceInfoForQrCode)
             }

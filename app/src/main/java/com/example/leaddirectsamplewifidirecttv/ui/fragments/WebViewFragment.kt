@@ -3,6 +3,7 @@ package layout
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
@@ -21,6 +22,10 @@ class WebViewFragment : Fragment(R.layout.fragment_webview) {
         webView = binding.webView
 
         webView?.settings?.javaScriptEnabled = true
+        webView?.getSettings()?.mediaPlaybackRequiresUserGesture = false;
+        webView?.clearHistory();
+        webView?.clearFormData();
+        webView?.clearCache(true);
         webView?.settings?.setSupportZoom(true)
         webView?.settings?.domStorageEnabled = true
         webView?.settings?.setAllowFileAccessFromFileURLs(true)
@@ -31,26 +36,25 @@ class WebViewFragment : Fragment(R.layout.fragment_webview) {
         webView?.settings?.javaScriptCanOpenWindowsAutomatically = true
         webView?.settings?.textZoom = 100
         webView?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        webView?.requestFocusFromTouch()
-
-        if (indexFilePath != null) {
-            webView?.loadUrl("file:///$indexFilePath")
-        } else {
-            webView?.loadUrl("https://www.youtube.com")
-        }
-
-        webView?.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-                if (!isMultipleH5P) {
-                    webView?.loadUrl(url)
-                }
-                return false
-            }
-        }
-
         webView?.webChromeClient = WebChromeClient()
-        webView?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         webView?.requestFocusFromTouch()
+
+        activity?.runOnUiThread(Runnable {
+            if (indexFilePath != null) {
+                webView?.loadUrl("file:///$indexFilePath")
+            } else {
+                webView?.loadUrl("https://www.youtube.com")
+            }
+
+            webView?.webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+                    if (!isMultipleH5P) {
+                        webView?.loadUrl(url)
+                    }
+                    return false
+                }
+            }
+        })
     }
 
 
