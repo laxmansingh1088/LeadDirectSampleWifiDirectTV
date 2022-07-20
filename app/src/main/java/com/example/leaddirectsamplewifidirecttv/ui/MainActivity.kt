@@ -80,7 +80,6 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
             viewModel.openFragment(mainFragment, supportFragmentManager)
         }
         requestPermissionInstallApk()
-        enableLocationSettings()
     }
 
     private fun initializeWifiDirectSdk() {
@@ -89,36 +88,6 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
     }
 
 
-    protected fun enableLocationSettings() {
-        val locationRequest: LocationRequest = LocationRequest.create()
-            .setInterval(5000)
-            .setFastestInterval(1000)
-            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-        val builder = LocationSettingsRequest.Builder()
-            .addLocationRequest(locationRequest)
-        LocationServices
-            .getSettingsClient(this)
-            .checkLocationSettings(builder.build())
-            .addOnSuccessListener(
-                this
-            ) { response: LocationSettingsResponse? ->}
-            .addOnFailureListener(
-                this
-            ) { ex: Exception? ->
-                if (ex is ResolvableApiException) {
-                    // Location settings are NOT satisfied,  but this can be fixed  by showing the user a dialog.
-                    try {
-                        // Show the dialog by calling startResolutionForResult(),  and check the result in onActivityResult().
-                        ex.startResolutionForResult(
-                            this@MainActivity,
-                            1007
-                        )
-                    } catch (sendEx: SendIntentException) {
-                        // Ignore the error.
-                    }
-                }
-            }
-    }
     private fun requestPermissionInstallApk() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!getPackageManager().canRequestPackageInstalls()) {

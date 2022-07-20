@@ -114,7 +114,6 @@ class LeadP2PHandler(
     }
 
     private fun discoverPeers() {
-        stopDiscoveringPeers()
         val mServiceBroadcastingRunnable: Runnable = object : Runnable {
             override fun run() {
                 if (ActivityCompat.checkSelfPermission(
@@ -683,7 +682,6 @@ class LeadP2PHandler(
                 serverSocket?.close()
                 serverSocket = null
             }
-            System.gc()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -777,7 +775,6 @@ class LeadP2PHandler(
     override fun cleanAndRestartChatServer() {
         Log.d(TAG, "Chat SErver restarted....>>..>>")
         initChatSocketConnection()
-        System.gc()
     }
 
     override fun cleanAndRestartChatClient() {
@@ -785,7 +782,6 @@ class LeadP2PHandler(
         if (chatClient != null) {
             chatClient = null
         }
-        System.gc()
         manager?.requestConnectionInfo(channel) {
             if (it.groupFormed) {
                 initChatClient()
@@ -796,7 +792,6 @@ class LeadP2PHandler(
     override fun cleanAndRestartServer() {
         Log.d(TAG, "SErver restarted....>>..>>")
         initSocketConnection()
-        System.gc()
     }
 
     override fun cleanAndRestartClient() {
@@ -804,7 +799,6 @@ class LeadP2PHandler(
         if (clientFileTransfer != null) {
             clientFileTransfer = null
         }
-        System.gc()
         manager?.requestConnectionInfo(channel) {
             if (it.groupFormed) {
                 initClient()
