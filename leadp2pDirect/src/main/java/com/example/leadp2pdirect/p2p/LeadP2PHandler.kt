@@ -729,6 +729,7 @@ class LeadP2PHandler(
 
     fun unRegisterReceiver() {
         stopDiscoveringPeers()
+
         receiver?.also { receiver ->
             activity.unregisterReceiver(receiver)
         }

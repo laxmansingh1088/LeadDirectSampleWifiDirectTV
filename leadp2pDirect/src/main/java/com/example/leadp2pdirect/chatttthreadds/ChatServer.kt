@@ -14,6 +14,7 @@ import com.example.leadp2pdirect.textmessage.ReceiveCallback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.*
 import java.net.ServerSocket
 import java.net.Socket
@@ -34,12 +35,16 @@ class ChatServer(
     private var cr: ContentResolver? = null
 
     fun sendMessage(message: BaseMessage) {
-        GlobalScope.launch(Dispatchers.IO) {
-            if (outputStream != null) {
-                val messageByteArray = message.serialize().toByteArray()
-                outputStream?.write(messageByteArray)
-                outputStream?.flush()
-            }
+            GlobalScope.launch(Dispatchers.IO) {
+                try {
+                    val messageByteArray = message.serialize().toByteArray()
+                    outputStream?.write(messageByteArray)
+                    outputStream?.flush()
+                }catch (ex :Exception){
+                    withContext(Dispatchers.Main){
+                        cleanAndRestartChatServer()
+                    }
+                }
         }
     }
 
@@ -65,10 +70,8 @@ class ChatServer(
                 try {
                     bytes = inputStream!!.read(buffer)
                     if (bytes == -1) {
-                        Log.d("checkinggg","bytessss==-1")
-                        handler.post {
-                            cleanAndRestartChatServer()
-                        }
+                        Log.d("checkinggg", "bytessss==-1")
+                       throw IOException()
                     }
                     if (bytes > 0) {
                         val finalbytes = bytes

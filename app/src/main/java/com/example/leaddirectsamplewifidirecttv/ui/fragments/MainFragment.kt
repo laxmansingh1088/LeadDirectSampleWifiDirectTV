@@ -86,6 +86,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
 
     private fun generateQRCode(data: String) {
+        if(requireActivity()!=null){
+            try{
         val manager =
             requireActivity().getSystemService(FragmentActivity.WINDOW_SERVICE) as WindowManager
         // initializing a variable for default display.
@@ -112,6 +114,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             binding.qrImage.setImageBitmap(bitmap);
         } catch (e: WriterException) {
             Log.e("Tag", e.toString());
+        }
+            }catch (ex:Exception){
+
+            }
         }
     }
 
