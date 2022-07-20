@@ -9,4 +9,5 @@ object ChatType {
     const val PDF_CHAT_TYPE = 4
     const val WebView_CHAT_TYPE = 5
     const val RESOURCE_SYNC_CHAT_TYPE = 6
+    const val TEXT_CHAT_TYPE = 7
 }

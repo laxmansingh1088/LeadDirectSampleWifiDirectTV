@@ -78,7 +78,7 @@ class LeadP2PHandler(
             receiver = P2PBroadcastReceiver(this::onP2PStateReceiver)
         }
        // manager?.removeGroup(channel,null)
-        //  createGroupOwnerr()
+          //createGroupOwnerr()
         discoverPeers()
     }
 
@@ -114,6 +114,7 @@ class LeadP2PHandler(
     }
 
     private fun discoverPeers() {
+        stopDiscoveringPeers()
         val mServiceBroadcastingRunnable: Runnable = object : Runnable {
             override fun run() {
                 if (ActivityCompat.checkSelfPermission(
@@ -226,6 +227,19 @@ class LeadP2PHandler(
                 }
             }
 
+
+        /*    {"deviceId":"7a:d6:dc:40:e6:92",
+                "deviceName":"Lenovo Tab M7 lakshya",
+                "p2pdevice":{"deviceAddress":"7a:d6:dc:40:e6:92",
+                    "deviceCapability":37,
+                    "deviceName":"Lenovo Tab M7 lakshya",
+                    "groupCapability":0,
+                    "primaryDeviceType":"10-0050F204-5",
+                    "status":3,
+                    "wfdInfo":{},
+                    "wpsConfigMethodsSupported":392},
+                "status":3}*/
+
             P2PState.THIS_DEVICE_CHANGE -> {
                 val myDevice =
                     intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE) as WifiP2pDevice?
@@ -239,6 +253,8 @@ class LeadP2PHandler(
                         myDevice.secondaryDeviceType,
                         myDevice.status
                     )
+
+
                     val info = Gson().toJson(myDeviceInfoForQrCode)
                     p2PCallBacks.myDeviceInfo(info)
                     Log.d(TAG, "2PCallBacks.myDeviceInfo(info) --> line 214")
@@ -667,6 +683,7 @@ class LeadP2PHandler(
                 serverSocket?.close()
                 serverSocket = null
             }
+            System.gc()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -690,11 +707,13 @@ class LeadP2PHandler(
 
     fun cleanUp() {
         try {
-            serverSocket!!.close()
+            serverSocket?.close()
+            chatserverSocket?.close()
             fileServerAsyncTask!!.cancel(true)
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        manager?.stopPeerDiscovery(channel,null)
         manager = null
         channel = null
         receiver = null
@@ -758,6 +777,7 @@ class LeadP2PHandler(
     override fun cleanAndRestartChatServer() {
         Log.d(TAG, "Chat SErver restarted....>>..>>")
         initChatSocketConnection()
+        System.gc()
     }
 
     override fun cleanAndRestartChatClient() {
@@ -765,7 +785,7 @@ class LeadP2PHandler(
         if (chatClient != null) {
             chatClient = null
         }
-
+        System.gc()
         manager?.requestConnectionInfo(channel) {
             if (it.groupFormed) {
                 initChatClient()
@@ -776,6 +796,7 @@ class LeadP2PHandler(
     override fun cleanAndRestartServer() {
         Log.d(TAG, "SErver restarted....>>..>>")
         initSocketConnection()
+        System.gc()
     }
 
     override fun cleanAndRestartClient() {
@@ -783,6 +804,7 @@ class LeadP2PHandler(
         if (clientFileTransfer != null) {
             clientFileTransfer = null
         }
+        System.gc()
         manager?.requestConnectionInfo(channel) {
             if (it.groupFormed) {
                 initClient()

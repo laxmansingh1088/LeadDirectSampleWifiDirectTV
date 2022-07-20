@@ -147,6 +147,7 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
     override fun onDestroy() {
         super.onDestroy()
         viewModel.leadp2pHander?.unRegisterReceiver()
+        viewModel.leadp2pHander?.cleanUp()
     }
 
 
@@ -308,7 +309,6 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
                             LeadResourcesRoomDatabase.getDatabase(applicationContext)
                                 .resourceDetailDao()
                                 .insert(Mapper.convertToResourceDetailList(fileModelArraylist))
-
                             chatCommands.transferStatus = TransferStatus.RECEIVED
                             chatCommands.resourceSyncCommand?.isSynced = true
                             val info = Gson().toJson(chatCommands)

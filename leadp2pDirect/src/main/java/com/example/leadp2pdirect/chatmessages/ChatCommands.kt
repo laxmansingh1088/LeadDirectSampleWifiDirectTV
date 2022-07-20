@@ -7,5 +7,6 @@ data class ChatCommands(
     var transferStatus: TransferStatus,
     val videoCommands: VideoCommands? = null,
     val audioCommands: AudioCommands? = null,
-    val resourceSyncCommand: ResourceSyncCommand? = null
+    val resourceSyncCommand: ResourceSyncCommand? = null,
+    var textMessage: TextMessage? = null
 )
