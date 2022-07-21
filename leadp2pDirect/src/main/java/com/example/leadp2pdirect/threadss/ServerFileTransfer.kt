@@ -98,17 +98,21 @@ class ServerFileTransfer(
 
     override fun run() {
         val handler = Handler(Looper.getMainLooper())
-        try {
-            Log.d(TAG, "serverFiletranser== run() method");
-            socket = serverSocket!!.accept()
-            objectOutputStream = ObjectOutputStream(socket?.getOutputStream())
-            objectOutputStream?.flush()
-            objectInputStream = ObjectInputStream(socket?.getInputStream())
-        } catch (e: IOException) {
-            e.message?.let { Log.d(TAG, it) }
-            handler.post {
-                Log.d(TAG, "cleanAndRestartServer() --> line 110")
-                cleanAndRestartServer()
+        var connected = false
+        while (!connected) {
+            try {
+                Log.d(TAG, "serverFiletranser== run() method");
+                socket = serverSocket?.accept()
+                objectOutputStream = ObjectOutputStream(socket?.getOutputStream())
+                objectOutputStream?.flush()
+                objectInputStream = ObjectInputStream(socket?.getInputStream())
+                connected = true
+            } catch (e: Exception) {
+                e.message?.let { Log.d(TAG, it) }
+               /* handler.post {
+                    Log.d(TAG, "cleanAndRestartServer() --> line 110")
+                    cleanAndRestartServer()
+                }*/
             }
         }
 
@@ -206,6 +210,7 @@ class ServerFileTransfer(
                         Log.d(TAG, "cleanAndRestartServer() --> line 206")
                         cleanAndRestartServer()
                     }
+                    break
                 }
             }
             Log.d("done.", "doneee")

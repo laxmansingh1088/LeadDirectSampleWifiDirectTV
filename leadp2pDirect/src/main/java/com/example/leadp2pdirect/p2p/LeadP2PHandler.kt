@@ -496,12 +496,14 @@ class LeadP2PHandler(
     }
 
     private fun initChatSocketConnection() {
+        Log.d("serverssss","chatttt server")
         initChatSockets()
         initChatServer()
     }
 
 
     private fun initSocketConnection() {
+        Log.d("serverssss","file server")
         //init sockets for transport servers and callbacks for reinit servers
         initSockets()
         initFileServer()

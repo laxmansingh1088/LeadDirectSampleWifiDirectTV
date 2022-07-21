@@ -34,32 +34,38 @@ class ChatServer(
     var outputStream: OutputStream? = null
     private var cr: ContentResolver? = null
 
+
     fun sendMessage(message: BaseMessage) {
-            GlobalScope.launch(Dispatchers.IO) {
-                try {
-                    val messageByteArray = message.serialize().toByteArray()
-                    outputStream?.write(messageByteArray)
-                    outputStream?.flush()
-                }catch (ex :Exception){
-                    withContext(Dispatchers.Main){
-                        cleanAndRestartChatServer()
-                    }
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                val messageByteArray = message.serialize().toByteArray()
+                outputStream?.write(messageByteArray)
+                outputStream?.flush()
+            }catch (ex :Exception){
+                ex.message?.let { Log.d(TAG, "Line-46   " + it) }
+                withContext(Dispatchers.Main){
+                    cleanAndRestartChatServer()
                 }
+            }
         }
     }
 
     override fun run() {
         val handler = Handler(Looper.getMainLooper())
-        try {
-            Log.d(TAG, "serverFiletranser== run() method");
-            socket = serverSocket!!.accept()
-            outputStream = socket?.getOutputStream()
-            outputStream?.flush()
-            inputStream = socket?.getInputStream()
-        } catch (e: IOException) {
-            e.message?.let { Log.d(TAG, it) }
-            handler.post {
-                cleanAndRestartChatServer()
+        var connected = false
+        while (!connected) {
+            try {
+                socket = serverSocket?.accept()
+                Log.d(TAG, "Line-56   " + "ChatSERver== run() method");
+                outputStream = socket?.getOutputStream()
+                outputStream?.flush()
+                inputStream = socket?.getInputStream()
+                connected = true
+            } catch (e: Exception) {
+                e.message?.let { Log.d(TAG, "Line-62   " + it) }
+                /*  handler.post {
+                      cleanAndRestartChatServer()
+                  }*/
             }
         }
         val executorService = Executors.newSingleThreadExecutor()
@@ -70,8 +76,12 @@ class ChatServer(
                 try {
                     bytes = inputStream!!.read(buffer)
                     if (bytes == -1) {
-                        Log.d("checkinggg", "bytessss==-1")
-                       throw IOException()
+                        Log.d("checkinggg", "Line-75   " + "bytessss==-1")
+                        Log.d(TAG, "Line-87   ")
+                        socket?.close()
+                        socket = null
+                        cleanAndRestartChatServer()
+                        break
                     }
                     if (bytes > 0) {
                         val finalbytes = bytes
@@ -81,15 +91,16 @@ class ChatServer(
                             callback.ReceiveMessage(received)
                         }
                     }
-                } catch (e: IOException) {
-                    e.message?.let { Log.d(TAG, it) }
+                } catch (e: Exception) {
                     handler.post {
+                        Log.d(TAG, "Line-87   ")
+                        socket?.close()
+                        socket = null
                         cleanAndRestartChatServer()
                     }
                 }
             }
         }
-
     }
 
     private fun publishProgress(fileDownloadProgresssModel: FileDownloadUploadProgresssModel) {
@@ -120,8 +131,6 @@ class ChatServer(
 
     private fun cleanAndRestartChatServer() {
         try {
-            socket?.close()
-            socket = null
             inputStream?.close()
             outputStream?.flush()
             outputStream?.close()
@@ -129,10 +138,9 @@ class ChatServer(
             ex.message?.let { Log.d(TAG, it) }
         }
         if (context != null) {
-            Log.d(TAG, "cleanAndRestartChatServer() -->")
+            Log.d(TAG, "Line-134   " + "cleanAndRestartChatServer() -->")
         }
         leadP2PHandlerCallbacks.cleanAndRestartChatServer()
-
     }
 
 
