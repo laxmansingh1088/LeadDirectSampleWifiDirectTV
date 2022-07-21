@@ -11,13 +11,14 @@ import android.net.Uri
 import android.net.wifi.WifiManager
 import android.net.wifi.WpsInfo
 import android.net.wifi.p2p.*
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat.checkSelfPermission
 import com.example.leadp2pdirect.P2PCallBacks
@@ -34,11 +35,11 @@ import com.example.leadp2pdirect.threadss.ClientFileTransfer
 import com.example.leadp2pdirect.threadss.ServerFileTransfer
 import com.example.leadp2pdirect.utils.Utils
 import com.google.gson.Gson
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import java.net.InetAddress
 import java.net.ServerSocket
 
+
+//https://stackoverflow.com/questions/21722767/how-do-i-get-a-peer-to-peer-wifi-service-discovery-to-work
 
 @SuppressLint("NewApi")
 class LeadP2PHandler(
@@ -114,6 +115,106 @@ class LeadP2PHandler(
     }
 
     private fun discoverPeers() {
+        val discoveryRunnable: Runnable = object : Runnable {
+            override fun run() {
+                manager?.clearLocalServices(channel, object : WifiP2pManager.ActionListener {
+                    override fun onSuccess() {
+                        val record: HashMap<String, String> = HashMap()
+                        record["name"] = "Amos"
+                        val serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
+                            "_test",
+                            "_presence.tcp", record
+                        )
+                        if (checkSelfPermission(
+                                activity,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            return
+                        }
+                        manager?.addLocalService(channel, serviceInfo,
+                            object : WifiP2pManager.ActionListener {
+                                override fun onSuccess() {
+                                    manager?.setDnsSdResponseListeners(
+                                        channel,
+                                        WifiP2pManager.DnsSdServiceResponseListener { s, s2, wifiP2pDevice ->
+                                            Log.wtf(
+                                                "whooooa",
+                                                "device " + wifiP2pDevice.deviceName + "/" + wifiP2pDevice.deviceAddress
+                                            );
+                                        },
+                                        WifiP2pManager.DnsSdTxtRecordListener { s, mutableMap, wifiP2pDevice ->
+                                            Log.wtf("whooooa", "got txt " + mutableMap.get("name"));
+                                        }
+                                    )
+                                    manager?.clearServiceRequests(
+                                        channel,
+                                        object : WifiP2pManager.ActionListener {
+                                            override fun onSuccess() {
+                                                manager?.addServiceRequest(
+                                                    channel,
+                                                    WifiP2pDnsSdServiceRequest.newInstance(),
+                                                    object : WifiP2pManager.ActionListener {
+                                                        override fun onSuccess() {
+                                                            if (checkSelfPermission(
+                                                                    activity,
+                                                                    Manifest.permission.ACCESS_FINE_LOCATION
+                                                                ) != PackageManager.PERMISSION_GRANTED
+                                                            ) {
+                                                                return
+                                                            }
+                                                            manager?.discoverPeers(
+                                                                channel,
+                                                                object :
+                                                                    WifiP2pManager.ActionListener {
+                                                                    override fun onSuccess() {
+                                                                        if (checkSelfPermission(
+                                                                                activity,
+                                                                                Manifest.permission.ACCESS_FINE_LOCATION
+                                                                            ) != PackageManager.PERMISSION_GRANTED
+                                                                        ) {
+                                                                            return
+                                                                        }
+                                                                        manager?.discoverServices(
+                                                                            channel,
+                                                                            object :
+                                                                                WifiP2pManager.ActionListener {
+                                                                                override fun onSuccess() {
+                                                                                    // this is my recursive discovery approach
+                                                                                }
+
+                                                                                override fun onFailure(
+                                                                                    code: Int
+                                                                                ) {
+                                                                                }
+                                                                            })
+                                                                    }
+
+                                                                    override fun onFailure(code: Int) {}
+                                                                })
+                                                        }
+
+                                                        override fun onFailure(code: Int) {}
+                                                    })
+                                            }
+
+                                            override fun onFailure(code: Int) {}
+                                        })
+                                }
+
+                                override fun onFailure(code: Int) {}
+                            })
+                    }
+
+                    override fun onFailure(code: Int) {}
+                })
+
+            }
+        }
+        discoveryRunnable.run()
+
+/*
+
         val mServiceBroadcastingRunnable: Runnable = object : Runnable {
             override fun run() {
                 if (ActivityCompat.checkSelfPermission(
@@ -148,6 +249,7 @@ class LeadP2PHandler(
         }
         mServiceBroadcastingRunnable.run()
 
+*/
 
         /*  if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION)
               != PackageManager.PERMISSION_GRANTED

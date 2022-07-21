@@ -2,7 +2,6 @@ package com.example.leaddirectsamplewifidirecttv.ui
 
 
 import android.content.Intent
-import android.content.IntentSender.SendIntentException
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -38,16 +37,13 @@ import com.example.leadp2pdirect.helpers.PermissionsHelper
 import com.example.leadp2pdirect.servers.FileDownloadUploadProgresssModel
 import com.example.leadp2pdirect.servers.FileModel
 import com.example.leadp2pdirect.utils.Utils
-import com.google.android.gms.common.api.ResolvableApiException
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.LocationSettingsRequest
-import com.google.android.gms.location.LocationSettingsResponse
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
 import layout.WebViewFragment
+import java.io.BufferedReader
 import java.io.File
+import java.io.FileReader
 
 
 class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
@@ -167,7 +163,7 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
                 null
             }
             FileModel.TYPE_ZIP -> {
-                val zipFilePath = filePathsList[0].absoluteFilePath;
+                val zipFilePath = filePathsList[0].absoluteFilePath
                 val targetLocation =
                     filePathsList[0].absoluteFilePath.replace(
                         filePathsList[0].fileName,

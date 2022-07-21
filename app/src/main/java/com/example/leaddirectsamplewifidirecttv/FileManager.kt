@@ -81,6 +81,7 @@ class FileManager {
         }
 
         val f = File(destination + dir)
+        Log.d("filepaaa",f.absolutePath)
         if (!f.isDirectory) {
             f.mkdirs()
         }
