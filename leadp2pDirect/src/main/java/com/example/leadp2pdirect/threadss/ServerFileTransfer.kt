@@ -24,7 +24,8 @@ class ServerFileTransfer(
     private val context: Context?,
     private val serverSocket: ServerSocket?,
     private val p2PCallBacks: P2PCallBacks,
-    private val leadP2PHandlerCallbacks: LeadP2PHandlerCallbacks
+    private val leadP2PHandlerCallbacks: LeadP2PHandlerCallbacks,
+    private val handler: Handler
 ) :
     Thread() {
     private val TAG = "ServerFileTransfer.kt"
@@ -36,7 +37,6 @@ class ServerFileTransfer(
 
     fun sendFiles(uris: ArrayList<Uri>) {
         val executorService = Executors.newSingleThreadExecutor()
-        val handler = Handler(Looper.getMainLooper())
         executorService.execute {
             var len = 0
             val buf = ByteArray(8192)
@@ -97,7 +97,6 @@ class ServerFileTransfer(
     }
 
     override fun run() {
-        val handler = Handler(Looper.getMainLooper())
         var connected = false
         while (!connected) {
             try {
@@ -109,10 +108,6 @@ class ServerFileTransfer(
                 connected = true
             } catch (e: Exception) {
                 e.message?.let { Log.d(TAG, it) }
-               /* handler.post {
-                    Log.d(TAG, "cleanAndRestartServer() --> line 110")
-                    cleanAndRestartServer()
-                }*/
             }
         }
 
@@ -125,7 +120,7 @@ class ServerFileTransfer(
             while (socket != null) {
                 try {
                     val fileModelArrayList =
-                        objectInputStream!!.readObject() as ArrayList<FileModel>
+                        objectInputStream?.readObject() as ArrayList<FileModel>
                     var file = File(context?.let { getRootDirectoryPath(it) })
                     if (file != null && file.exists()) {
                         deleteDir(file)
@@ -245,11 +240,7 @@ class ServerFileTransfer(
 
     private fun cleanAndRestartServer() {
         try {
-            socket?.close()
-            socket = null
-            objectInputStream?.close()
-            objectOutputStream?.flush()
-            objectOutputStream?.close()
+            cleanUp()
         } catch (ex: Exception) {
             Log.d(TAG, "cleanAndRestartServer() --> ${ex.message}")
         }
@@ -257,7 +248,15 @@ class ServerFileTransfer(
             Log.d(TAG, "cleanAndRestartServer() -->")
         }
         leadP2PHandlerCallbacks.cleanAndRestartServer()
+    }
 
+
+    fun cleanUp(){
+        socket?.close()
+        socket = null
+        objectInputStream?.close()
+        objectOutputStream?.flush()
+        objectOutputStream?.close()
     }
 
 

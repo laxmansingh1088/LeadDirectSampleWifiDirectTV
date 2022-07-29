@@ -25,7 +25,8 @@ class ChatServer(
     private val serverSocket: ServerSocket?,
     private val p2PCallBacks: P2PCallBacks,
     private val callback: ReceiveCallback,
-    private val leadP2PHandlerCallbacks: LeadP2PHandlerCallbacks
+    private val leadP2PHandlerCallbacks: LeadP2PHandlerCallbacks,
+    private val handler: Handler
 ) :
     Thread() {
     private val TAG = "ChatServer.kt"
@@ -51,7 +52,6 @@ class ChatServer(
     }
 
     override fun run() {
-        val handler = Handler(Looper.getMainLooper())
         var connected = false
         while (!connected) {
             try {
@@ -131,9 +131,7 @@ class ChatServer(
 
     private fun cleanAndRestartChatServer() {
         try {
-            inputStream?.close()
-            outputStream?.flush()
-            outputStream?.close()
+           cleanUp()
         } catch (ex: Exception) {
             ex.message?.let { Log.d(TAG, it) }
         }
@@ -141,6 +139,13 @@ class ChatServer(
             Log.d(TAG, "Line-134   " + "cleanAndRestartChatServer() -->")
         }
         leadP2PHandlerCallbacks.cleanAndRestartChatServer()
+    }
+
+
+    fun cleanUp(){
+        inputStream?.close()
+        outputStream?.flush()
+        outputStream?.close()
     }
 
 

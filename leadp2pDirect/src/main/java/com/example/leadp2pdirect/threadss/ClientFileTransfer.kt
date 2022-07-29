@@ -3,6 +3,7 @@ package com.example.leadp2pdirect.threadss
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -13,6 +14,9 @@ import com.example.leadp2pdirect.servers.FileHelper
 import com.example.leadp2pdirect.servers.FileModel
 import com.example.leadp2pdirect.servers.LeadP2PHandlerCallbacks
 import com.example.leadp2pdirect.utils.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.io.*
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -24,7 +28,8 @@ class ClientFileTransfer(
     private val context: Context,
     private val serverAddress: InetAddress?,
     private val p2PCallBacks: P2PCallBacks,
-    private val leadP2PHandlerCallbacks: LeadP2PHandlerCallbacks
+    private val leadP2PHandlerCallbacks: LeadP2PHandlerCallbacks,
+    private val handler: Handler
 ) : Thread() {
     private val TAG = "ClientFileTransfer.kt"
     private var socket: Socket? = null
@@ -33,9 +38,70 @@ class ClientFileTransfer(
     private var cr: ContentResolver? = null
 
 
+    /* fun sendFiles(uris: ArrayList<Uri>) {
+         GlobalScope.launch(Dispatchers.IO) {
+             var len = 0
+             val buf = ByteArray(8192)
+             var timeTakenbyFile = ""
+             try {
+                 val fileModelArrayList =
+                     FileHelper.getFileModelsListFromUris(uris, getContentResolverInstance()!!)
+                 objectOutputStream?.writeObject(fileModelArrayList)
+                 objectOutputStream?.flush()
+                 for (i in uris.indices) {
+                     timeTakenbyFile = ""
+                     val inputStream = cr!!.openInputStream(uris[i])
+                     val fileModel = fileModelArrayList!![i]
+                     val progress = FileDownloadUploadProgresssModel()
+                     progress.fileName = fileModel.fileName
+                     progress.dataIncrement = 0
+                     progress.totalProgress = 0
+                     progress.sendingOrReceiving =
+                         FileDownloadUploadProgresssModel.SendingOrReceiving.Sending.name
+                     progress.fileLength = fileModel.fileLength
+                     val startTime = System.currentTimeMillis()
+                     while (inputStream!!.read(buf).also { len = it } != -1) {
+                         objectOutputStream?.write(buf, 0, len)
+                         objectOutputStream?.flush()
+                         progress.dataIncrement = len.toLong()
+                         if ((progress.totalProgress * 100 / fileModel.fileLength).toInt() ==
+                             ((progress.totalProgress + progress.dataIncrement) * 100 / fileModel.fileLength).toInt()
+                         ) {
+                             progress.totalProgress = progress.totalProgress + progress.dataIncrement
+                             continue
+                         }
+                         progress.totalProgress = progress.totalProgress + progress.dataIncrement
+                         handler.post {
+                             publishProgress(progress)
+                         }
+                     }
+                     inputStream.close()
+                     val endTime = System.currentTimeMillis()
+                     val timeElapsed = endTime - startTime
+                     val minutes = TimeUnit.MILLISECONDS.toMinutes(timeElapsed)
+                     val seconds = TimeUnit.MILLISECONDS.toSeconds(timeElapsed) % 60
+                     timeTakenbyFile =
+                         "FileSize:- " + Utils.humanReadableByteCountSI(fileModel.fileLength) + " &&  Time Taken:- " + minutes + " min : " + seconds + " sec"
+                     Log.d("Time--elapsed:->", timeTakenbyFile)
+                     handler.post {
+                         onPostExecute(timeTakenbyFile)
+                     }
+                 }
+                 objectOutputStream?.flush()
+                 System.gc()
+             } catch (e: Exception) {
+                 e.message?.let { Log.d(TAG, it) }
+                 Log.d(TAG, "Exception --> line 90")
+                 handler.post {
+                     cleanAndRestartClient(e.message)
+                 }
+             }
+         }
+     }*/
+
+
     fun sendFiles(uris: ArrayList<Uri>) {
         val executorService = Executors.newSingleThreadExecutor()
-        val handler = Handler(Looper.getMainLooper())
         executorService.execute {
             var len = 0
             val buf = ByteArray(8192)
@@ -85,9 +151,13 @@ class ClientFileTransfer(
                     }
                 }
                 objectOutputStream?.flush()
+
             } catch (e: Exception) {
+                e.message?.let { Log.d(TAG, it) }
                 Log.d(TAG, "Exception --> line 90")
-                cleanAndRestartClient(e.message)
+                handler.post {
+                    cleanAndRestartClient(e.message)
+                }
             }
         }
     }
@@ -99,15 +169,17 @@ class ClientFileTransfer(
                 if (socket == null) {
                     socket = Socket()
                 }
-                socket!!.connect(InetSocketAddress(serverAddress, Constants.FILE_TRANSFER_PORT))
+                socket?.connect(InetSocketAddress(serverAddress, Constants.FILE_TRANSFER_PORT))
                 objectOutputStream = ObjectOutputStream(socket?.getOutputStream())
                 objectOutputStream?.flush()
                 objectInputStream = ObjectInputStream(socket?.getInputStream())
                 connected = true
             } catch (e: IOException) {
+                e.message?.let { Log.d(TAG, it) }
                 socket = null
-                sleep(3000)
                 e.printStackTrace()
+                e.printStackTrace()
+                sleep(3000)
             }
         }
     }
@@ -116,7 +188,6 @@ class ClientFileTransfer(
     override fun run() {
         startOrWaitForSocket(false)
         val executorService = Executors.newSingleThreadExecutor()
-        val handler = Handler(Looper.getMainLooper())
         executorService.execute {
             val buf = ByteArray(8192)
             var len = 0
@@ -210,7 +281,10 @@ class ClientFileTransfer(
                     }
                 } catch (e: IOException) {
                     Log.d(TAG, "IOException --> line214")
-                    cleanAndRestartClient(e.message)
+                    handler.post {
+                        cleanAndRestartClient(e.message)
+                    }
+                    break
                 }
             }
         }
@@ -252,14 +326,11 @@ class ClientFileTransfer(
         } catch (ex: Exception) {
             Log.d(TAG, "cleanAndRestartClient -> Exception --> ${ex.message}")
         }
-        val handler = Handler(Looper.getMainLooper())
-        handler.post() {
-            if (context != null) {
-                exceptionMessage?.let { Utils.showToast(context, it) }
-            }
-            Log.d(TAG, "cleanAndRestartClient()")
-            leadP2PHandlerCallbacks.cleanAndRestartClient()
+        if (context != null) {
+            exceptionMessage?.let { Utils.showToast(context, it) }
         }
+        Log.d(TAG, "cleanAndRestartClient()")
+        leadP2PHandlerCallbacks.cleanAndRestartClient()
     }
 
     public fun cleanUp() {

@@ -2,6 +2,7 @@ package com.example.leadp2pdirect.chatttthreadds
 
 import android.content.ContentResolver
 import android.content.Context
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -12,14 +13,12 @@ import com.example.leadp2pdirect.servers.FileModel
 import com.example.leadp2pdirect.servers.LeadP2PHandlerCallbacks
 import com.example.leadp2pdirect.textmessage.BaseMessage
 import com.example.leadp2pdirect.textmessage.ReceiveCallback
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.io.*
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.SocketException
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
 
@@ -28,7 +27,8 @@ class ChatClient(
     private val serverAddress: InetAddress?,
     private val p2PCallBacks: P2PCallBacks,
     private val callback: ReceiveCallback,
-    private val leadP2PHandlerCallbacks: LeadP2PHandlerCallbacks
+    private val leadP2PHandlerCallbacks: LeadP2PHandlerCallbacks,
+    private val handler: Handler
 ) : Thread() {
     private val TAG = "ChatClient.kt"
     private var socket: Socket? = null
@@ -36,15 +36,23 @@ class ChatClient(
     var outputStream: OutputStream? = null
     private var cr: ContentResolver? = null
 
+
     fun sendMessage(message: BaseMessage) {
         GlobalScope.launch(Dispatchers.IO) {
-            if (outputStream != null) {
+            try {
                 val messageByteArray = message.serialize().toByteArray()
                 outputStream?.write(messageByteArray)
                 outputStream?.flush()
+            } catch (e: SocketException) {
+                e.message?.let { Log.d(TAG, it) }
+                handler.post {
+                    Log.d(TAG, "Line 48")
+                    cleanAndRestartChatClient()
+                }
             }
         }
     }
+
 
     private fun startOrWaitForSocket(connect: Boolean) {
         var connected = connect
@@ -59,8 +67,9 @@ class ChatClient(
                 connected = true
             } catch (e: IOException) {
                 socket = null
-                sleep(5000)
                 e.message?.let { Log.d(TAG, it) }
+                e.printStackTrace()
+                sleep(3000)
             }
         }
     }
@@ -68,14 +77,21 @@ class ChatClient(
 
     override fun run() {
         startOrWaitForSocket(false)
+        Log.d(TAG, "Line 77  run()")
         val executorService = Executors.newSingleThreadExecutor()
-        val handler = Handler(Looper.getMainLooper())
         executorService.execute {
             val buffer = ByteArray(1024)
             var bytes: Int
             while (socket != null) {
                 try {
                     bytes = inputStream!!.read(buffer)
+                    if (bytes == -1) {
+                        Log.d(TAG, "Line 88  bytess=-1")
+                        socket?.close()
+                        socket = null
+                        cleanAndRestartChatClient()
+                        break
+                    }
                     if (bytes > 0) {
                         val finalbytes = bytes
                         handler.post {
@@ -86,7 +102,12 @@ class ChatClient(
                     }
                 } catch (e: IOException) {
                     e.message?.let { Log.d(TAG, it) }
-                    cleanAndRestartChatClient()
+                    handler.post {
+                        socket?.close()
+                        socket = null
+                        Log.d(TAG, "Line 108")
+                        cleanAndRestartChatClient()
+                    }
                 }
             }
         }
@@ -128,14 +149,11 @@ class ChatClient(
         } catch (ex: Exception) {
             ex.message?.let { Log.d(TAG, it) }
         }
-        val handler = Handler(Looper.getMainLooper())
-        handler.post() {
-            Log.d(TAG, "cleanAndRestartChatClient()")
-            leadP2PHandlerCallbacks.cleanAndRestartChatClient()
-        }
+        Log.d(TAG, "Line 150  cleanAndRestartChatClient()")
+        leadP2PHandlerCallbacks.cleanAndRestartChatClient()
     }
 
-    public fun cleanUp() {
+    fun cleanUp() {
         try {
             if (socket == null) {
                 startOrWaitForSocket(true)

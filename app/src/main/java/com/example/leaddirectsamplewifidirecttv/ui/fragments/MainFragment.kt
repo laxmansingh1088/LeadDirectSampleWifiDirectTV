@@ -38,17 +38,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 "onResume->viewModel.selectedDevice-> ${viewModel?.selectedDevice?.deviceName}"
             )
             binding.tvconnectedTo.text = "Connected to :- ${viewModel?.selectedDevice?.deviceName}"
-            viewModel.leadp2pHander?.checkServerFile()
-        }
-
-
-
-        viewModel.leadp2pHander?.getWifiP2pManager()?.requestConnectionInfo( viewModel.leadp2pHander?.getChannel()) {
-            if (it.groupFormed == true) {
-                Log.d(TAG, "onResume->Connected->true")
-            } else {
-                Log.d(TAG, "onResume->Connected->false")
-            }
         }
     }
 

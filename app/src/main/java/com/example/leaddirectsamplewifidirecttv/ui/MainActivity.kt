@@ -85,14 +85,19 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
 
 
     private fun requestPermissionInstallApk() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (!getPackageManager().canRequestPackageInstalls()) {
-                startActivityForResult(
-                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                        .setData(Uri.parse(String.format("package:%s", getPackageName()))), 1
-                );
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!getPackageManager().canRequestPackageInstalls()) {
+                    startActivityForResult(
+                        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                            .setData(Uri.parse(String.format("package:%s", getPackageName()))), 1
+                    )
+                }
             }
+        }catch (ex: Exception){
+            ex.printStackTrace()
         }
+
     }
 
     /* register the broadcast receiver with the intent values to be matched */
@@ -212,9 +217,10 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
     }
 
     override fun onDisconnected() {
-        val mainFragment = MainFragment()
-        viewModel.openFragment(mainFragment, supportFragmentManager)
-        viewModel.leadp2pHander?.startPeersDiscovery()
+        runOnUiThread(Runnable {
+            val mainFragment = MainFragment()
+            viewModel.openFragment(mainFragment, supportFragmentManager)
+        })
     }
 
 
@@ -239,20 +245,21 @@ class MainActivity : FragmentActivity(R.layout.activity_main), P2PCallBacks {
                 (viewModel.currentFragment as MainFragment)?.myDeviceInfo()
             }
         } else {
-            viewModel.leadp2pHander?.getWifiP2pManager()?.requestConnectionInfo( viewModel.leadp2pHander?.getChannel()) {
-                if (!it.groupFormed) {
-                    viewModel.selectedDevice = null
-                    if (deviceInfoForQrCode != null && viewModel.currentFragment is MainFragment) {
-                        (viewModel.currentFragment as MainFragment)?.myDeviceInfo()
+            viewModel.leadp2pHander?.getWifiP2pManager()
+                ?.requestConnectionInfo(viewModel.leadp2pHander?.getChannel()) {
+                    if (!it.groupFormed) {
+                        viewModel.selectedDevice = null
+                        if (deviceInfoForQrCode != null && viewModel.currentFragment is MainFragment) {
+                            (viewModel.currentFragment as MainFragment)?.myDeviceInfo()
+                        }
                     }
                 }
-            }
-           /* if (viewModel.leadp2pHander?.isConnected() == false) {
-                viewModel.selectedDevice = null
-                if (deviceInfoForQrCode != null && viewModel.currentFragment is MainFragment) {
-                    (viewModel.currentFragment as MainFragment)?.myDeviceInfo()
-                }
-            }*/
+            /* if (viewModel.leadp2pHander?.isConnected() == false) {
+                 viewModel.selectedDevice = null
+                 if (deviceInfoForQrCode != null && viewModel.currentFragment is MainFragment) {
+                     (viewModel.currentFragment as MainFragment)?.myDeviceInfo()
+                 }
+             }*/
         }
     }
 

@@ -70,7 +70,9 @@ class LeadP2PHandler(
     private var clientFileTransfer: ClientFileTransfer? = null
     private var chatServer: ChatServer? = null
     private var chatClient: ChatClient? = null
-
+    private var scannedPeerDevice: PeerDevice? = null
+    private var peersList = ArrayList<PeerDevice>()
+    private var isWifiDirectConnected = false
 
     init {
         manager = activity.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
@@ -78,9 +80,8 @@ class LeadP2PHandler(
         channel.also {
             receiver = P2PBroadcastReceiver(this::onP2PStateReceiver)
         }
-       // manager?.removeGroup(channel,null)
-          //createGroupOwnerr()
         discoverPeers()
+        Log.d(TAG, "discoverPeers()  line -- 83")
     }
 
 
@@ -92,126 +93,108 @@ class LeadP2PHandler(
         return channel
     }
 
-    fun createGroupOwnerr() {
-        if (becomeGroupOwnerIntent) {
-            if (checkSelfPermission(
-                    activity,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return
-            }
-            manager?.createGroup(channel, object : WifiP2pManager.ActionListener {
-                override fun onSuccess() {
-                    Toast.makeText(activity, "CreateGroup Successful", Toast.LENGTH_SHORT).show()
-                }
-
-                override fun onFailure(p0: Int) {
-                    Toast.makeText(activity, "CreateGroup Fail", Toast.LENGTH_SHORT).show()
-                }
-
-            })
-        }
-    }
 
     private fun discoverPeers() {
-        val discoveryRunnable: Runnable = object : Runnable {
-            override fun run() {
-                manager?.clearLocalServices(channel, object : WifiP2pManager.ActionListener {
-                    override fun onSuccess() {
-                        val record: HashMap<String, String> = HashMap()
-                        record["name"] = "Amos"
-                        val serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
-                            "_test",
-                            "_presence.tcp", record
-                        )
-                        if (checkSelfPermission(
-                                activity,
-                                Manifest.permission.ACCESS_FINE_LOCATION
-                            ) != PackageManager.PERMISSION_GRANTED
-                        ) {
-                            return
-                        }
-                        manager?.addLocalService(channel, serviceInfo,
-                            object : WifiP2pManager.ActionListener {
-                                override fun onSuccess() {
-                                    manager?.setDnsSdResponseListeners(
-                                        channel,
-                                        WifiP2pManager.DnsSdServiceResponseListener { s, s2, wifiP2pDevice ->
-                                            Log.wtf(
-                                                "whooooa",
-                                                "device " + wifiP2pDevice.deviceName + "/" + wifiP2pDevice.deviceAddress
-                                            );
-                                        },
-                                        WifiP2pManager.DnsSdTxtRecordListener { s, mutableMap, wifiP2pDevice ->
-                                            Log.wtf("whooooa", "got txt " + mutableMap.get("name"));
-                                        }
-                                    )
-                                    manager?.clearServiceRequests(
-                                        channel,
-                                        object : WifiP2pManager.ActionListener {
-                                            override fun onSuccess() {
-                                                manager?.addServiceRequest(
-                                                    channel,
-                                                    WifiP2pDnsSdServiceRequest.newInstance(),
-                                                    object : WifiP2pManager.ActionListener {
-                                                        override fun onSuccess() {
-                                                            if (checkSelfPermission(
-                                                                    activity,
-                                                                    Manifest.permission.ACCESS_FINE_LOCATION
-                                                                ) != PackageManager.PERMISSION_GRANTED
-                                                            ) {
-                                                                return
-                                                            }
-                                                            manager?.discoverPeers(
-                                                                channel,
-                                                                object :
-                                                                    WifiP2pManager.ActionListener {
-                                                                    override fun onSuccess() {
-                                                                        if (checkSelfPermission(
-                                                                                activity,
-                                                                                Manifest.permission.ACCESS_FINE_LOCATION
-                                                                            ) != PackageManager.PERMISSION_GRANTED
-                                                                        ) {
-                                                                            return
-                                                                        }
-                                                                        manager?.discoverServices(
-                                                                            channel,
-                                                                            object :
-                                                                                WifiP2pManager.ActionListener {
-                                                                                override fun onSuccess() {
-                                                                                    // this is my recursive discovery approach
-                                                                                }
 
-                                                                                override fun onFailure(
-                                                                                    code: Int
-                                                                                ) {
-                                                                                }
-                                                                            })
-                                                                    }
-
-                                                                    override fun onFailure(code: Int) {}
-                                                                })
-                                                        }
-
-                                                        override fun onFailure(code: Int) {}
-                                                    })
-                                            }
-
-                                            override fun onFailure(code: Int) {}
-                                        })
+        manager?.clearLocalServices(channel, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+                val record: HashMap<String, String> = HashMap()
+                record["name"] = "Lead"
+                val serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
+                    "_test",
+                    "_presence.tcp", record
+                )
+                if (checkSelfPermission(
+                        activity,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    return
+                }
+                manager?.addLocalService(channel, serviceInfo,
+                    object : WifiP2pManager.ActionListener {
+                        override fun onSuccess() {
+                            manager?.setDnsSdResponseListeners(
+                                channel,
+                                WifiP2pManager.DnsSdServiceResponseListener { s, s2, wifiP2pDevice ->
+                                    Log.d(
+                                        "whooooa",
+                                        "device " + wifiP2pDevice.deviceName + "/" + wifiP2pDevice.deviceAddress
+                                    );
+                                },
+                                WifiP2pManager.DnsSdTxtRecordListener { s, mutableMap, wifiP2pDevice ->
+                                    Log.d("whooooa", "got txt " + mutableMap.get("name"));
                                 }
+                            )
+                            manager?.clearServiceRequests(
+                                channel,
+                                object : WifiP2pManager.ActionListener {
+                                    override fun onSuccess() {
+                                        manager?.addServiceRequest(
+                                            channel,
+                                            WifiP2pDnsSdServiceRequest.newInstance(),
+                                            object : WifiP2pManager.ActionListener {
+                                                override fun onSuccess() {
+                                                    if (checkSelfPermission(
+                                                            activity,
+                                                            Manifest.permission.ACCESS_FINE_LOCATION
+                                                        ) != PackageManager.PERMISSION_GRANTED
+                                                    ) {
+                                                        return
+                                                    }
+                                                    manager?.discoverPeers(
+                                                        channel,
+                                                        object :
+                                                            WifiP2pManager.ActionListener {
+                                                            override fun onSuccess() {
+                                                                if (checkSelfPermission(
+                                                                        activity,
+                                                                        Manifest.permission.ACCESS_FINE_LOCATION
+                                                                    ) != PackageManager.PERMISSION_GRANTED
+                                                                ) {
+                                                                    return
+                                                                }
+                                                                manager?.discoverServices(
+                                                                    channel,
+                                                                    object :
+                                                                        WifiP2pManager.ActionListener {
+                                                                        override fun onSuccess() {
+                                                                            // this is my recursive discovery approach
+                                                                            Log.d(
+                                                                                TAG,
+                                                                                "discoverPeers Success....."
+                                                                            )
+                                                                        }
 
-                                override fun onFailure(code: Int) {}
-                            })
-                    }
+                                                                        override fun onFailure(
+                                                                            code: Int
+                                                                        ) {
+                                                                            Log.d(
+                                                                                TAG,
+                                                                                "discoverPeers Failure....."
+                                                                            )
+                                                                        }
+                                                                    })
+                                                            }
 
-                    override fun onFailure(code: Int) {}
-                })
+                                                            override fun onFailure(code: Int) {}
+                                                        })
+                                                }
 
+                                                override fun onFailure(code: Int) {}
+                                            })
+                                    }
+
+                                    override fun onFailure(code: Int) {}
+                                })
+                        }
+
+                        override fun onFailure(code: Int) {}
+                    })
             }
-        }
-        discoveryRunnable.run()
+
+            override fun onFailure(code: Int) {}
+        })
 
 /*
 
@@ -229,12 +212,12 @@ class LeadP2PHandler(
                     channel,
                     object : WifiP2pManager.ActionListener {
                         override fun onSuccess() {
-                            Log.i("WIFI Discover", "Peers discovery successfully")
+                            Log.d("WIFI Discover", "Peers discovery successfully")
                             Utils.showToast(activity, "Peers discovery successfully")
                         }
 
                         override fun onFailure(error: Int) {
-                            Log.i("WIFI Discover", "Peers discovery failed $error")
+                            Log.d("WIFI Discover", "Peers discovery failed $error")
                             Utils.showToast(activity, "Peers discovery failed  Code :-  $error")
                         }
                     })
@@ -251,95 +234,91 @@ class LeadP2PHandler(
 
 */
 
-        /*  if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION)
-              != PackageManager.PERMISSION_GRANTED
-          ) {
-              return
+/*  if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION)
+      != PackageManager.PERMISSION_GRANTED
+  ) {
+      return
+  }
+  manager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
+      override fun onSuccess() {
+          Log.d("WIFI Discover", "Peers discovery successfully")
+          Utils.showToast(activity, "Peers discovery successfully")
+          if (!isConnected()) {
+              Handler().postDelayed(Runnable { startPeersDiscovery() },6000)
+          } else {
+              manager?.stopPeerDiscovery(channel, null)
           }
-          manager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
-              override fun onSuccess() {
-                  Log.i("WIFI Discover", "Peers discovery successfully")
-                  Utils.showToast(activity, "Peers discovery successfully")
-                  if (!isConnected()) {
-                      Handler().postDelayed(Runnable { startPeersDiscovery() },6000)
-                  } else {
-                      manager?.stopPeerDiscovery(channel, null)
-                  }
-              }
+      }
 
-              override fun onFailure(p0: Int) {
-                  if (!isConnected()) {
-                      Handler().postDelayed(Runnable { startPeersDiscovery() },6000)
-                  } else {
-                      manager?.stopPeerDiscovery(channel, null)
-                  }
-                  Log.i("WIFI Discover", "Peers discovery failed $p0")
-                  Utils.showToast(activity, "Peers discovery failed  Code :-  $p0")
-              }
-          })*/
+      override fun onFailure(p0: Int) {
+          if (!isConnected()) {
+              Handler().postDelayed(Runnable { startPeersDiscovery() },6000)
+          } else {
+              manager?.stopPeerDiscovery(channel, null)
+          }
+          Log.d("WIFI Discover", "Peers discovery failed $p0")
+          Utils.showToast(activity, "Peers discovery failed  Code :-  $p0")
+      }
+  })*/
     }
 
-    fun startPeersDiscovery() {
+    private fun startPeersDiscovery() {
         discoverPeers()
+        Log.d(TAG, "discoverPeers()  line -- 264")
     }
 
     private fun onP2PStateReceiver(intent: Intent, state: P2PState) {
-        Log.i("LeadP2PHandler", "state -->$state")
+        Log.d("LeadP2PHandler", "state -->$state")
         when (state) {
             P2PState.P2P_ENABLED -> {
-                Log.i("LeadP2PHandler", "LeadP2PHandler")
+                Log.d("LeadP2PHandler", "LeadP2PHandler")
                 Toast.makeText(this.activity, "Wifi is enabled", Toast.LENGTH_SHORT).show()
             }
 
             P2PState.P2P_NOT_ENABLED -> {
-                Log.i("LeadP2PHandler", "P2P_NOT_ENABLED")
+                Log.d("LeadP2PHandler", "P2P_NOT_ENABLED")
                 Toast.makeText(this.activity, "Wifi is NOT enabled", Toast.LENGTH_SHORT).show()
                 turnWifiOnOff()
             }
 
             P2PState.CONNECTION_CHANGED -> {
-                Log.i("LeadP2PHandler", "CONNECTION_CHANGED")
+                Log.d("LeadP2PHandler", "CONNECTION_CHANGED")
                 this.connectionChanged(intent)
             }
 
             P2PState.PEERS_CHANGED -> {
-                Log.i("LeadP2PHandler", "PEERS_CHANGED")
-                Toast.makeText(this.activity, "Peers Changed", Toast.LENGTH_SHORT).show()
+                if (!isWifiDirectConnected) {
+                    Log.d("LeadP2PHandler", "PEERS_CHANGED")
+                    Toast.makeText(this.activity, "Peers Changed", Toast.LENGTH_SHORT).show()
 
-                if (ActivityCompat.checkSelfPermission(
-                        activity,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    )
-                    != PackageManager.PERMISSION_GRANTED
-                ) {
-                    return
-                }
-                manager?.requestPeers(channel) { peers: WifiP2pDeviceList? ->
-                    if (peers != null) {
-                        Log.i("LeadP2PHandler", "Peers discovered successfully ${peers.toString()}")
-                        p2PCallBacks.updatePeersList(
-                            Mapper.mapWifiP2PDeviceListToPeerDeviceList(
-                                peers
-                            )
+                    if (ActivityCompat.checkSelfPermission(
+                            activity,
+                            Manifest.permission.ACCESS_FINE_LOCATION
                         )
-                    } else {
-                        Log.i("LeadP2PHandler", "No Peers list is available")
+                        != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        return
+                    }
+                    manager?.requestPeers(channel) { peers: WifiP2pDeviceList? ->
+                        Log.d(TAG, "requestPeers.....")
+                        if (peers != null) {
+                            Log.d(
+                                "LeadP2PHandler",
+                                "Peers discovered successfully ${peers.toString()}"
+                            )
+                            peersList.clear()
+                            val mappedPeerList = Mapper.mapWifiP2PDeviceListToPeerDeviceList(peers)
+                            if (mappedPeerList != null) {
+                                peersList.addAll(mappedPeerList)
+                            }
+                            connectWithQrCode()
+                            p2PCallBacks.updatePeersList(mappedPeerList)
+                        } else {
+                            Log.d("LeadP2PHandler", "No Peers list is available")
+                        }
                     }
                 }
             }
-
-
-        /*    {"deviceId":"7a:d6:dc:40:e6:92",
-                "deviceName":"Lenovo Tab M7 lakshya",
-                "p2pdevice":{"deviceAddress":"7a:d6:dc:40:e6:92",
-                    "deviceCapability":37,
-                    "deviceName":"Lenovo Tab M7 lakshya",
-                    "groupCapability":0,
-                    "primaryDeviceType":"10-0050F204-5",
-                    "status":3,
-                    "wfdInfo":{},
-                    "wpsConfigMethodsSupported":392},
-                "status":3}*/
 
             P2PState.THIS_DEVICE_CHANGE -> {
                 val myDevice =
@@ -355,22 +334,25 @@ class LeadP2PHandler(
                         myDevice.status
                     )
 
-
                     val info = Gson().toJson(myDeviceInfoForQrCode)
                     p2PCallBacks.myDeviceInfo(info)
                     Log.d(TAG, "2PCallBacks.myDeviceInfo(info) --> line 214")
                 }
-                Log.i("LeadP2PHandler", "THIS_DEVICE_CHANGE")
+                Log.d("LeadP2PHandler", "THIS_DEVICE_CHANGE")
             }
 
             P2PState.NOT_VALID_ACTION -> {
-                Log.i("LeadP2PHandler", "NOT_VALID_ACTION")
+                Log.d("LeadP2PHandler", "NOT_VALID_ACTION")
             }
         }
     }
 
 
     fun connect(device: PeerDevice?) {
+        if (isWifiDirectConnected == true) {
+            return
+        }
+        Log.d("connecttttttt", "connect(device: PeerDevice?)")
         if (device!!.p2pdevice.status == WifiP2pDevice.INVITED) {
             channel?.also { channel ->
                 manager?.removeGroup(channel, object : WifiP2pManager.ActionListener {
@@ -432,25 +414,30 @@ class LeadP2PHandler(
                 manager?.connect(channel, config, object : WifiP2pManager.ActionListener {
                     override fun onSuccess() {
                         //success logic
-                        Log.i("WIFI Discover", "channel connect successfully")
+                        Log.d("connecttttttt", "channel connect successfully")
                     }
 
                     override fun onFailure(reason: Int) {
-                        Log.i("WIFI Discover", "channel connect failed $reason")
+                        Log.d("connecttttttt", "channel connect failed $reason")
                     }
                 })
             }
         }
     }
 
-    public fun isServer() = isServer
-
     private fun initChatClient() {
         isConnected()
         if (chatClient == null) {
             Log.d(TAG, "initChatClient()")
             chatClient =
-                ChatClient(activity, serverAddress, p2PCallBacks, this.MessageReceiver, this)
+                ChatClient(
+                    activity,
+                    serverAddress,
+                    p2PCallBacks,
+                    this.MessageReceiver,
+                    this,
+                    Handler(Looper.getMainLooper())
+                )
             chatClient?.priority = Thread.MAX_PRIORITY
             chatClient?.start()
         }
@@ -489,21 +476,26 @@ class LeadP2PHandler(
             "initChatServer---> +${chatserverSocket?.isClosed} && ${chatserverSocket?.isBound}"
         )
         chatServer =
-            ChatServer(activity, chatserverSocket, p2PCallBacks, this.MessageReceiver, this)
+            ChatServer(
+                activity,
+                chatserverSocket,
+                p2PCallBacks,
+                this.MessageReceiver,
+                this,
+                Handler(Looper.getMainLooper())
+            )
         chatServer?.priority = Thread.MAX_PRIORITY
         chatServer?.start()
 
     }
 
     private fun initChatSocketConnection() {
-        Log.d("serverssss","chatttt server")
         initChatSockets()
         initChatServer()
     }
 
 
     private fun initSocketConnection() {
-        Log.d("serverssss","file server")
         //init sockets for transport servers and callbacks for reinit servers
         initSockets()
         initFileServer()
@@ -559,7 +551,13 @@ class LeadP2PHandler(
         isConnected()
         if (clientFileTransfer == null) {
             Log.d(TAG, "initClient()")
-            clientFileTransfer = ClientFileTransfer(activity, serverAddress, p2PCallBacks, this)
+            clientFileTransfer = ClientFileTransfer(
+                activity,
+                serverAddress,
+                p2PCallBacks,
+                this,
+                Handler(Looper.getMainLooper())
+            )
             clientFileTransfer?.priority = Thread.MAX_PRIORITY
             clientFileTransfer?.start()
         }
@@ -586,14 +584,14 @@ class LeadP2PHandler(
                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO) as? WifiP2pInfo
             if (wifiP2pInfo != null) {
                 //Start connection
-                openSocket(wifiP2pInfo);
+                openSocket(wifiP2pInfo)
             }
             var peerDevice: PeerDevice? = null
 
             val wifiP2pGroup: WifiP2pGroup? =
                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP) as? WifiP2pGroup
 
-            if (wifiP2pInfo?.groupFormed == true && wifiP2pInfo?.isGroupOwner == true) {
+            if (wifiP2pInfo?.groupFormed == true && wifiP2pInfo?.isGroupOwner) {
                 var clientList: MutableList<WifiP2pDevice> = mutableListOf<WifiP2pDevice>()
                 clientList.addAll(wifiP2pGroup?.clientList as Collection<WifiP2pDevice>)
                 if (clientList != null && clientList.isNotEmpty()) {
@@ -603,10 +601,12 @@ class LeadP2PHandler(
                         wifiP2pDevice?.deviceAddress.toString(),
                         wifiP2pDevice?.status!!, wifiP2pDevice
                     )
+                    isWifiDirectConnected = true
                     p2PCallBacks.onConnected(peerDevice)
+                    clearPeersList()
+                    stopDiscoveringPeers()
                 } else {
                     val wifiP2pDevice = wifiP2pGroup?.owner
-                    val deviceName = wifiP2pDevice?.deviceName
                     val myDeviceInfoForQrCode = wifiP2pDevice?.let {
                         MyDeviceInfoForQrCode(
                             wifiP2pDevice?.deviceName,
@@ -618,9 +618,10 @@ class LeadP2PHandler(
                     }
                     val info = Gson().toJson(myDeviceInfoForQrCode)
                     p2PCallBacks.myDeviceInfo(info)
+                    isWifiDirectConnected = false
                     p2PCallBacks.onDisconnected()
+                    startPeersDiscovery()
                     Log.d(TAG, "2PCallBacks.myDeviceInfo(info) --> line 437")
-
                 }
                 Utils.showToast(activity, "Server Started.....")
             } else if (wifiP2pInfo?.groupFormed == true) {
@@ -636,13 +637,18 @@ class LeadP2PHandler(
                     wifiP2pGroup?.owner?.status!!, wifiP2pDevice
                 )
                 Utils.showToast(activity, "Client Started.....")
+                isWifiDirectConnected = true
                 p2PCallBacks.onConnected(peerDevice)
+                clearPeersList()
+                stopDiscoveringPeers()
             }
 
-            Log.i("LeadP2PHandler", "Connected to P2P network. Requesting connection info")
+            Log.d("LeadP2PHandler", "Connected to P2P network. Requesting connection info")
         } else {
+            isWifiDirectConnected = false
             p2PCallBacks.onDisconnected()
             cleanUpServerSockets()
+            startPeersDiscovery()
             Utils.showToast(activity, "COMMUNICATION_DISCONNECTED")
         }
 
@@ -657,7 +663,7 @@ class LeadP2PHandler(
             channel
         ) { wifiP2pGroup ->
             if (wifiP2pGroup != null) {
-                Log.i("LeadP2PHandler", "Group info available")
+                Log.d("LeadP2PHandler", "Group info available")
                 this.wifiP2pGroup = wifiP2pGroup
                 if (wifiP2pGroup.isGroupOwner) {
                     val clientList: MutableList<WifiP2pDevice> = mutableListOf<WifiP2pDevice>()
@@ -669,19 +675,18 @@ class LeadP2PHandler(
                             wifiP2pDevice?.deviceAddress.toString(),
                             wifiP2pDevice?.status!!, wifiP2pDevice
                         )
+                        isWifiDirectConnected = true
                         p2PCallBacks.onConnected(peerDevice)
+                        clearPeersList()
+                        stopDiscoveringPeers()
                     }
                 }
             }
         }
     }
 
-    private fun areInfoEquals(info1: WifiP2pInfo?, info2: WifiP2pInfo?): Boolean {
-        return if (info1 == null || info2 == null) {
-            false
-        } else {
-            info1.groupFormed == info2.groupFormed && info1.isGroupOwner == info2.isGroupOwner && info1.groupOwnerAddress == info2.groupOwnerAddress
-        }
+    private fun clearPeersList() {
+        peersList?.clear()
     }
 
     fun isConnected(): Boolean {
@@ -752,7 +757,13 @@ class LeadP2PHandler(
             serverFileTransfer = null
         }
         Log.d(TAG, "initFileServer---> +${serverSocket?.isClosed} && ${serverSocket?.isBound}")
-        serverFileTransfer = ServerFileTransfer(activity, serverSocket, p2PCallBacks, this)
+        serverFileTransfer = ServerFileTransfer(
+            activity,
+            serverSocket,
+            p2PCallBacks,
+            this,
+            Handler(Looper.getMainLooper())
+        )
         serverFileTransfer?.priority = Thread.MAX_PRIORITY
         serverFileTransfer?.start()
     }
@@ -791,6 +802,43 @@ class LeadP2PHandler(
         }
     }
 
+    private fun connectWithQrCode() {
+        if (scannedPeerDevice != null && !isWifiDirectConnected && peersList != null && peersList?.size > 0) {
+            for (peerDevice in peersList) {
+                if (scannedPeerDevice?.deviceId == peerDevice?.deviceId
+                ) {
+                    Log.d("connecttttttt", "222222")
+                    val tempScannedDevice = scannedPeerDevice
+                    scannedPeerDevice = null
+                    connect(tempScannedDevice)
+                    break
+                }
+            }
+        }
+    }
+
+    fun connectQRCodeScan(result: String?) {
+        if (result != null) {
+            Log.d("myscannnn", result)
+        }
+        val myDeviceInfoForQrCode =
+            Gson().fromJson(result, MyDeviceInfoForQrCode::class.java)
+        val wifiP2pDevice = WifiP2pDevice()
+        wifiP2pDevice.deviceName = myDeviceInfoForQrCode.deviceName
+        wifiP2pDevice.deviceAddress = myDeviceInfoForQrCode.deviceId
+        wifiP2pDevice.status = myDeviceInfoForQrCode.status
+        wifiP2pDevice.primaryDeviceType = myDeviceInfoForQrCode.primaryDeviceType
+        wifiP2pDevice.secondaryDeviceType = myDeviceInfoForQrCode.secondaryDeviceType
+        scannedPeerDevice = PeerDevice(
+            wifiP2pDevice.deviceName,
+            wifiP2pDevice.deviceAddress,
+            wifiP2pDevice.status,
+            wifiP2pDevice
+        )
+        Log.d("connecttttttt", "444444444")
+        connectWithQrCode()
+    }
+
     private fun cleanUpClient() {
         if (clientFileTransfer != null) {
             Log.d(TAG, "cleanUpClient()")
@@ -815,7 +863,7 @@ class LeadP2PHandler(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        manager?.stopPeerDiscovery(channel,null)
+        stopDiscoveringPeers()
         manager = null
         channel = null
         receiver = null
@@ -828,18 +876,18 @@ class LeadP2PHandler(
             activity.registerReceiver(receiver, Constants.p2pIntentFilter)
         }
         discoverPeers()
+        Log.d(TAG, "discoverPeers()  line -- 812")
     }
 
 
     fun unRegisterReceiver() {
         stopDiscoveringPeers()
-
         receiver?.also { receiver ->
             activity.unregisterReceiver(receiver)
         }
     }
 
-    fun stopDiscoveringPeers() {
+    private fun stopDiscoveringPeers() {
         manager?.stopPeerDiscovery(channel, null)
     }
 
@@ -869,17 +917,15 @@ class LeadP2PHandler(
         }
     }
 
-    fun checkServerFile() {
-        if (serverFileTransfer != null) {
-            val isalive = serverFileTransfer?.isAlive
-            Log.d("aliveeee", "$isalive")
-        }
-    }
-
 
     override fun cleanAndRestartChatServer() {
         Log.d(TAG, "Chat SErver restarted....>>..>>")
-        initChatSocketConnection()
+        manager?.requestConnectionInfo(channel) {
+            if (it.groupFormed) {
+                initChatSocketConnection()
+            }
+        }
+
     }
 
     override fun cleanAndRestartChatClient() {
@@ -896,7 +942,11 @@ class LeadP2PHandler(
 
     override fun cleanAndRestartServer() {
         Log.d(TAG, "SErver restarted....>>..>>")
-        initSocketConnection()
+        manager?.requestConnectionInfo(channel) {
+            if (it.groupFormed) {
+                initSocketConnection()
+            }
+        }
     }
 
     override fun cleanAndRestartClient() {
